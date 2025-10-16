@@ -1,284 +1,4 @@
-// import React, { useState, useEffect } from 'react';
-// import {
-//   View,
-//   Text,
-//   ScrollView,
-//   StyleSheet,
-//   TouchableOpacity,
-//   ActivityIndicator,
-//   Alert,
-//   TextInput,
-//   FlatList,
-// } from 'react-native';
-// import Icon from 'react-native-vector-icons/MaterialIcons';
-// import { useAuth } from '../../context/AuthContext';
-// import dietService from '../../api/dietService';
-
-// const colors = {
-//   background: '#ffffff',
-//   primary: '#10B981',
-//   primaryText: '#ffffff',
-//   text: '#333333',
-//   textSecondary: '#6b7280',
-//   error: '#d32f2f',
-//   border: '#ddd',
-// };
-
-// const DietLog = () => {
-//   const { token } = useAuth();
-//   const [logs, setLogs] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const [newLog, setNewLog] = useState({ meal: '', calories: '' });
-//   const [updatingLogId, setUpdatingLogId] = useState(null);
-//   const [updatingLogData, setUpdatingLogData] = useState({ meal: '', calories: '' });
-
-//   // Fetch diet logs
-//   const fetchLogs = async () => {
-//     setLoading(true);
-//     setError(null);
-//     try {
-//       const today = new Date().toISOString().split('T')[0]; // yyyy-mm-dd
-//       const res = await dietService.getDietLogsByDate(token, today);
-//       setLogs(res.data || []);
-//     } catch (err) {
-//       console.error(err);
-//       setError('Failed to load diet logs.');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Add new log
-//   const addLog = async () => {
-//     if (!newLog.meal || !newLog.calories) {
-//       Alert.alert('Validation Error', 'Please provide meal and calories.');
-//       return;
-//     }
-//     setLoading(true);
-//     try {
-//       await dietService.addLog(token, newLog);
-//       setNewLog({ meal: '', calories: '' });
-//       await fetchLogs();
-//     } catch (err) {
-//       console.error(err);
-//       Alert.alert('Error', 'Failed to add diet log.');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Update existing log
-//   const updateLog = async () => {
-//     if (!updatingLogData.meal || !updatingLogData.calories) {
-//       Alert.alert('Validation Error', 'Please provide meal and calories.');
-//       return;
-//     }
-//     setLoading(true);
-//     try {
-//       await dietService.updateLog(token, updatingLogId, updatingLogData);
-//       setUpdatingLogId(null);
-//       setUpdatingLogData({ meal: '', calories: '' });
-//       await fetchLogs();
-//     } catch (err) {
-//       console.error(err);
-//       Alert.alert('Error', 'Failed to update diet log.');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Delete log
-//   const deleteLog = async (id) => {
-//     Alert.alert('Confirm Delete', 'Are you sure you want to delete this entry?', [
-//       { text: 'Cancel', style: 'cancel' },
-//       {
-//         text: 'Delete',
-//         style: 'destructive',
-//         onPress: async () => {
-//           setLoading(true);
-//           try {
-//             await dietService.deleteLog(token, id);
-//             await fetchLogs();
-//           } catch (err) {
-//             console.error(err);
-//             Alert.alert('Error', 'Failed to delete diet log.');
-//           } finally {
-//             setLoading(false);
-//           }
-//         },
-//       },
-//     ]);
-//   };
-
-//   useEffect(() => {
-//     fetchLogs();
-//   }, []);
-
-//   if (loading) {
-//     return (
-//       <View style={[styles.container, styles.center]}>
-//         <ActivityIndicator size="large" color={colors.primary} />
-//         <Text style={{ marginTop: 10, color: colors.textSecondary }}>Loading diet logs...</Text>
-//       </View>
-//     );
-//   }
-
-//   if (error) {
-//     return (
-//       <View style={[styles.container, styles.center]}>
-//         <Text style={{ color: colors.error, marginBottom: 10 }}>{error}</Text>
-//         <TouchableOpacity onPress={fetchLogs} style={styles.retryButton}>
-//           <Text style={styles.retryButtonText}>Try Again</Text>
-//         </TouchableOpacity>
-//       </View>
-//     );
-//   }
-
-//   const renderLogItem = ({ item }) => (
-//     <View style={styles.logCard}>
-//       {updatingLogId === item.id ? (
-//         <View style={styles.editContainer}>
-//           <TextInput
-//             style={styles.input}
-//             placeholder="Meal"
-//             value={updatingLogData.meal}
-//             onChangeText={(text) => setUpdatingLogData({ ...updatingLogData, meal: text })}
-//           />
-//           <TextInput
-//             style={styles.input}
-//             placeholder="Calories"
-//             keyboardType="numeric"
-//             value={updatingLogData.calories}
-//             onChangeText={(text) => setUpdatingLogData({ ...updatingLogData, calories: text })}
-//           />
-//           <View style={styles.editActions}>
-//             <TouchableOpacity style={styles.saveButton} onPress={updateLog}>
-//               <Text style={styles.saveButtonText}>Save</Text>
-//             </TouchableOpacity>
-//             <TouchableOpacity
-//               style={styles.cancelButton}
-//               onPress={() => setUpdatingLogId(null)}>
-//               <Text style={styles.cancelButtonText}>Cancel</Text>
-//             </TouchableOpacity>
-//           </View>
-//         </View>
-//       ) : (
-//         <>
-//           <Text style={styles.logText}>{item.meal}</Text>
-//           <Text style={styles.logTextSecondary}>{item.calories} kcal</Text>
-//           <View style={styles.logActions}>
-//             <TouchableOpacity
-//               onPress={() => {
-//                 setUpdatingLogId(item.id);
-//                 setUpdatingLogData({ meal: item.meal, calories: String(item.calories) });
-//               }}>
-//               <Icon name="edit" size={20} color={colors.primary} />
-//             </TouchableOpacity>
-//             <TouchableOpacity onPress={() => deleteLog(item.id)}>
-//               <Icon name="delete" size={20} color={colors.error} />
-//             </TouchableOpacity>
-//           </View>
-//         </>
-//       )}
-//     </View>
-//   );
-
-//   return (
-//     <View style={styles.container}>
-//       <View style={styles.addLogContainer}>
-//         <TextInput
-//           style={styles.input}
-//           placeholder="Meal"
-//           value={newLog.meal}
-//           onChangeText={(text) => setNewLog({ ...newLog, meal: text })}
-//         />
-//         <TextInput
-//           style={styles.input}
-//           placeholder="Calories"
-//           keyboardType="numeric"
-//           value={newLog.calories}
-//           onChangeText={(text) => setNewLog({ ...newLog, calories: text })}
-//         />
-//         <TouchableOpacity style={styles.addButton} onPress={addLog}>
-//           <Text style={styles.addButtonText}>Add</Text>
-//         </TouchableOpacity>
-//       </View>
-
-//       <FlatList
-//         data={logs}
-//         keyExtractor={(item) => item.id.toString()}
-//         renderItem={renderLogItem}
-//         contentContainerStyle={{ paddingBottom: 100 }}
-//         showsVerticalScrollIndicator={false}
-//       />
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1, backgroundColor: colors.background, padding: 16 },
-//   center: { justifyContent: 'center', alignItems: 'center' },
-//   retryButton: {
-//     backgroundColor: colors.primary,
-//     padding: 10,
-//     borderRadius: 20,
-//   },
-//   retryButtonText: { color: colors.primaryText, fontWeight: 'bold' },
-//   addLogContainer: {
-//     marginBottom: 20,
-//     borderRadius: 10,
-//     backgroundColor: '#f8f8f8',
-//     padding: 10,
-//   },
-//   input: {
-//     borderWidth: 1,
-//     borderColor: colors.border,
-//     borderRadius: 10,
-//     padding: 10,
-//     marginBottom: 10,
-//     backgroundColor: '#fff',
-//   },
-//   addButton: {
-//     backgroundColor: colors.primary,
-//     padding: 12,
-//     borderRadius: 25,
-//     alignItems: 'center',
-//   },
-//   addButtonText: { color: colors.primaryText, fontWeight: 'bold' },
-//   logCard: {
-//     padding: 15,
-//     marginBottom: 12,
-//     backgroundColor: '#f8f8f8',
-//     borderRadius: 10,
-//   },
-//   logText: { fontSize: 16, color: colors.text, fontWeight: 'bold' },
-//   logTextSecondary: { fontSize: 14, color: colors.textSecondary, marginBottom: 8 },
-//   logActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 15 },
-//   editContainer: {},
-//   editActions: { flexDirection: 'row', justifyContent: 'space-between' },
-//   saveButton: {
-//     backgroundColor: colors.primary,
-//     padding: 10,
-//     borderRadius: 20,
-//     flex: 1,
-//     marginRight: 5,
-//     alignItems: 'center',
-//   },
-//   saveButtonText: { color: colors.primaryText, fontWeight: 'bold' },
-//   cancelButton: {
-//     backgroundColor: colors.error,
-//     padding: 10,
-//     borderRadius: 20,
-//     flex: 1,
-//     marginLeft: 5,
-//     alignItems: 'center',
-//   },
-//   cancelButtonText: { color: colors.primaryText, fontWeight: 'bold' },
-// });
-
-// export default DietLog;
-import React, {useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -297,17 +17,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   PermissionsAndroid,
+  AppState,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Video from 'react-native-video'; // Make sure you have installed 'react-native-video'
+import Video from 'react-native-video';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
-
-// Your original API service function is imported here
-import { saveDietEntry } from '../../api/dietService';
+import { useImageSelection } from '../../context/AuthContext';
+import { saveDietEntry, getDietLogsByDate, updateDietLog, deleteDietLog } from '../../api/dietService';
 
 const { width } = Dimensions.get('window');
 
 const DietLog = ({ navigation }) => {
+  // Get the image selection context
+  const { isImageSelectionInProgress, setIsImageSelectionInProgress } = useImageSelection();
+  
   // --- STATE MANAGEMENT ---
   const [totalCalories, setTotalCalories] = useState(0);
   const [totalProtein, setTotalProtein] = useState(0);
@@ -330,6 +53,48 @@ const DietLog = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [editMealId, setEditMealId] = useState(null);
+  const [fetching, setFetching] = useState(false);
+
+  // Add refs to track state that shouldn't trigger re-renders
+  const isMounted = useRef(true);
+  const appState = useRef(AppState.currentState);
+  const appStateSubscription = useRef(null);
+  
+  // Track component mount/unmount
+  useEffect(() => {
+    console.log('DietLog component mounted');
+    isMounted.current = true;
+    
+    // Add app state listener
+    appStateSubscription.current = AppState.addEventListener('change', nextAppState => {
+      console.log('AppState changed to', nextAppState);
+      
+      // If we're returning from background and we were in the middle of image selection,
+      // we need to prevent any navigation or authentication refresh
+      if (appState.current.match(/background/) && nextAppState === 'active' && isImageSelectionInProgress) {
+        console.log('Returning from image selection, preventing unwanted navigation');
+        // Set a flag to prevent auth refresh or navigation
+        setIsImageSelectionInProgress(false);
+        
+        // Force the modal to stay open
+        setTimeout(() => {
+          if (isMounted.current) {
+            setModalVisible(true);
+          }
+        }, 300);
+      }
+      
+      appState.current = nextAppState;
+    });
+    
+    return () => {
+      console.log('DietLog component unmounting');
+      isMounted.current = false;
+      if (appStateSubscription.current) {
+        appStateSubscription.current.remove();
+      }
+    };
+  }, [isImageSelectionInProgress]);
 
   // --- FIX APPLIED HERE ---
   // The mealType is now initialized in lowercase to match the backend requirement.
@@ -342,7 +107,64 @@ const DietLog = ({ navigation }) => {
     photo: null,
     mealType: 'breakfast', // Default meal type is now lowercase
   });
-  
+
+  // Fetch today's diet logs
+  const fetchTodayDietLogs = async () => {
+    if (isImageSelectionInProgress) {
+      console.log('Skipping fetchTodayDietLogs during image selection');
+      return;
+    }
+    
+    setFetching(true);
+    try {
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      const response = await getDietLogsByDate(today);
+      
+      if (response.success && response.data) {
+        // FIX: Check the structure of the response data
+        console.log('[DietLog] Response data structure:', response.data);
+        
+        // Transform the data to match our local state structure
+        const transformedMeals = {
+          Breakfast: [],
+          Lunch: [],
+          Dinner: [],
+          Snacks: [],
+        };
+        
+        // FIX: Handle different response structures
+        const logsArray = response.data.logs || response.data || [];
+        
+        logsArray.forEach(log => {
+          const mealType = log.mealType.charAt(0).toUpperCase() + log.mealType.slice(1);
+          if (transformedMeals[mealType]) {
+            transformedMeals[mealType].push({
+              id: log.id,
+              name: log.mealName,
+              calories: log.calories,
+              protein: log.protein,
+              carbs: log.carbs,
+              fats: log.fats,
+              // FIX: Ensure photo is a string or null
+              photo: log.photoUrl || log.photo || null,
+            });
+          }
+        });
+        
+        setMeals(transformedMeals);
+      }
+    } catch (error) {
+      console.error('Error fetching diet logs:', error);
+      Alert.alert('Error', 'Failed to fetch diet logs. Please try again.');
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTodayDietLogs();
+  }, []);
+
   useEffect(() => {
     let cal = 0, prot = 0, carb = 0, fat = 0;
     for (const mealType in meals) {
@@ -373,10 +195,19 @@ const DietLog = ({ navigation }) => {
     );
   };
 
+  // FIX: Added proper image handling in MealItem
   const MealItem = ({ item, mealType }) => (
     <View style={styles.mealListItem}>
       <View style={styles.mealThumb}>
-        {item.photo ? <Image source={{ uri: item.photo }} style={styles.mealImage} /> : <Text style={styles.mealPlaceholderIcon}>🍽</Text>}
+        {item.photo ? (
+          <Image 
+            source={{ uri: item.photo }} 
+            style={styles.mealImage} 
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={styles.mealPlaceholderIcon}>🍽</Text>
+        )}
       </View>
       <View style={styles.mealInfo}>
         <Text style={styles.mealName}>{item.name}</Text>
@@ -414,24 +245,37 @@ const DietLog = ({ navigation }) => {
       protein: meal.protein.toString(),
       carbs: meal.carbs.toString(),
       fats: meal.fats.toString(),
-      photo: meal.photo,
+      // FIX: Ensure photo is handled correctly
+      photo: meal.photo ? { uri: meal.photo } : null,
       mealType: mealType.toLowerCase(), // Ensure mealType is lowercase when editing
     });
     setEditMealId(meal.id);
     setModalVisible(true);
   };
 
-  const handleDeleteMeal = (mealType, id) => {
+  const handleDeleteMeal = async (mealType, id) => {
     const item = meals[mealType].find(m => m.id === id);
     if (!item) return;
+    
     Alert.alert(`Delete meal`, `Delete ${item.name}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: () => {
-          setMeals(prev => ({
-            ...prev,
-            [mealType]: prev[mealType].filter(m => m.id !== id),
-          }));
+        text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            // Delete from backend
+            await deleteDietLog(id);
+            
+            // Update local state
+            setMeals(prev => ({
+              ...prev,
+              [mealType]: prev[mealType].filter(m => m.id !== id),
+            }));
+            
+            Alert.alert('Success', 'Meal deleted successfully!');
+          } catch (error) {
+            console.error('Error deleting meal:', error);
+            Alert.alert('Error', 'Failed to delete meal. Please try again.');
+          }
         },
       },
     ]);
@@ -443,54 +287,64 @@ const DietLog = ({ navigation }) => {
     }
     setLoading(true);
 
-    const mealData = {
-      id: editMealId || Date.now().toString(),
-      name: form.mealName,
-      calories: parseInt(form.calories) || 0,
-      protein: parseInt(form.protein) || 0,
-      carbs: parseInt(form.carbs) || 0,
-      fats: parseInt(form.fats) || 0,
-      photo: form.photo,
-    };
-    
-    // The mealType name needs to be capitalized for the local state object key
-    const mealTypeKey = form.mealType.charAt(0).toUpperCase() + form.mealType.slice(1);
-
-    if (editMealId) {
-        setMeals(prev => ({
-            ...prev,
-            [mealTypeKey]: prev[mealTypeKey].map(item => 
-                item.id === editMealId ? mealData : item
-            ),
-        }));
-    } else {
-        setMeals(prev => ({
-            ...prev,
-            [mealTypeKey]: [mealData, ...prev[mealTypeKey]],
-        }));
-    }
-
     try {
-      // The API call will use `form` state which has the correct lowercase `mealType`
-      const response = await saveDietEntry(form);
+      let response;
+      
+      if (editMealId) {
+        // Update existing meal
+        response = await updateDietLog(editMealId, form);
+      } else {
+        // Create new meal
+        response = await saveDietEntry(form);
+      }
 
       if (response.success) {
+        // Create the meal data for local state
+        const mealData = {
+          id: editMealId || response.data?.id || Date.now().toString(),
+          name: form.mealName,
+          calories: parseInt(form.calories) || 0,
+          protein: parseInt(form.protein) || 0,
+          carbs: parseInt(form.carbs) || 0,
+          fats: parseInt(form.fats) || 0,
+          // FIX: Ensure photo is a string or null
+          photo: response.data?.photo || response.data?.photoUrl || null,
+        };
+        
+        // The mealType name needs to be capitalized for the local state object key
+        const mealTypeKey = form.mealType.charAt(0).toUpperCase() + form.mealType.slice(1);
+
+        if (editMealId) {
+          setMeals(prev => ({
+            ...prev,
+            [mealTypeKey]: prev[mealTypeKey].map(item => 
+              item.id === editMealId ? mealData : item
+            ),
+          }));
+        } else {
+          setMeals(prev => ({
+            ...prev,
+            [mealTypeKey]: [mealData, ...prev[mealTypeKey]],
+          }));
+        }
+
         closeModal();
-        Alert.alert('Success', 'Meal logged successfully! 🎉');
+        Alert.alert('Success', `Meal ${editMealId ? 'updated' : 'added'} successfully! 🎉`);
+        
+        // Refresh the diet logs after adding/updating
+        fetchTodayDietLogs();
       } else {
         Alert.alert(
           'Warning', 
-          'Meal added locally but failed to sync with server. ' + (response.message || 'Please try again later.')
+          response.message || 'Operation failed. Please try again later.'
         );
-        closeModal();
       }
     } catch (error) {
       console.error('Save diet error:', error);
       Alert.alert(
         'Warning', 
-        'Meal added locally but failed to sync. Please check your internet connection.'
+        'Operation failed. Please check your internet connection.'
       );
-      closeModal();
     } finally {
       setLoading(false);
     }
@@ -517,21 +371,49 @@ const DietLog = ({ navigation }) => {
     } else return true;
   };
 
+  // ✅ --- FIXED IMAGE PICKER FUNCTION --- ✅
   const pickImage = async (fromCamera = false) => {
+    // Check if component is still mounted
+    if (!isMounted.current) {
+      console.error('Component is not mounted, aborting image selection');
+      return;
+    }
+    
+    // Set context flag to indicate we're starting image selection
+    setIsImageSelectionInProgress(true);
+    
     const options = { mediaType: 'photo', quality: 0.7 };
     const action = fromCamera ? launchCamera : launchImageLibrary;
 
     try {
         const result = await action(options);
-        if (result.didCancel) return;
+        
+        // Check if component is still mounted after async operation
+        if (!isMounted.current) {
+          console.error('Component was unmounted during image selection');
+          setIsImageSelectionInProgress(false);
+          return;
+        }
+        
+        if (result.didCancel) {
+          setIsImageSelectionInProgress(false);
+          return;
+        }
+        
         if (result.assets && result.assets.length > 0) {
-            handleFormInput('photo', result.assets[0].uri);
+            handleFormInput('photo', result.assets[0]);
         } else {
             Alert.alert('Error', 'No photo was selected.');
         }
     } catch (error) {
         console.log('ImagePicker error:', error);
         Alert.alert('Error', 'Could not access camera or gallery.');
+    } finally {
+      // Reset the flag after a short delay to ensure app state change is processed
+      setTimeout(() => {
+        setIsImageSelectionInProgress(false);
+        console.log('Image selection process completed');
+      }, 500);
     }
   };
 
@@ -597,26 +479,43 @@ const DietLog = ({ navigation }) => {
 
         {/* Action Row */}
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => setModalVisible(true)}><Text style={styles.primaryBtnText}>+ Add Meal</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.ghostBtn} onPress={mockSyncWorkout}><Text style={styles.ghostBtnText}>Sync Workout</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => setModalVisible(true)} disabled={fetching}>
+            <Text style={styles.primaryBtnText}>+ Add Meal</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.ghostBtn} onPress={mockSyncWorkout}>
+            <Text style={styles.ghostBtnText}>Sync Workout</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Meals Lists */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today's Meals</Text>
-          {Object.keys(meals).map(mealType => (
-            <View key={mealType} style={{ marginBottom: 12 }}>
-              <View style={styles.mealHeaderRow}>
-                <Text style={styles.mealHeaderTitle}>{mealType}</Text>
-                <Text style={styles.mealHeaderCount}>{meals[mealType].length} items</Text>
-              </View>
-              {meals[mealType].length === 0 ? (
-                <View style={styles.emptyMealRow}><Text style={styles.emptyMealText}>No items logged for {mealType}</Text></View>
-              ) : (
-                <FlatList data={meals[mealType]} keyExtractor={i => i.id} horizontal showsHorizontalScrollIndicator={false} renderItem={({ item }) => <MealItem item={item} mealType={mealType} />} />
-              )}
+          {fetching ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#FFC107" />
+              <Text style={styles.loadingText}>Loading meals...</Text>
             </View>
-          ))}
+          ) : (
+            Object.keys(meals).map(mealType => (
+              <View key={mealType} style={{ marginBottom: 12 }}>
+                <View style={styles.mealHeaderRow}>
+                  <Text style={styles.mealHeaderTitle}>{mealType}</Text>
+                  <Text style={styles.mealHeaderCount}>{meals[mealType].length} items</Text>
+                </View>
+                {meals[mealType].length === 0 ? (
+                  <View style={styles.emptyMealRow}><Text style={styles.emptyMealText}>No items logged for {mealType}</Text></View>
+                ) : (
+                  <FlatList 
+                    data={meals[mealType]} 
+                    keyExtractor={i => i.id} 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    renderItem={({ item }) => <MealItem item={item} mealType={mealType} />} 
+                  />
+                )}
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
 
@@ -644,25 +543,75 @@ const DietLog = ({ navigation }) => {
                 ))}
               </View>
 
-              <TextInput placeholder="Food name" placeholderTextColor="#ccc" style={styles.input} value={form.mealName} onChangeText={(v) => handleFormInput('mealName', v)} />
+              <TextInput 
+                placeholder="Food name" 
+                placeholderTextColor="#ccc" 
+                style={styles.input} 
+                value={form.mealName} 
+                onChangeText={(v) => handleFormInput('mealName', v)} 
+              />
 
               <View style={styles.rowInputs}>
-                <TextInput placeholder="Calories" placeholderTextColor="#ccc" style={[styles.input,styles.smallInput]} value={form.calories} onChangeText={(v) => handleFormInput('calories', v)} keyboardType="numeric" />
-                <TextInput placeholder="Protein (g)" placeholderTextColor="#ccc" style={[styles.input,styles.smallInput]} value={form.protein} onChangeText={(v) => handleFormInput('protein', v)} keyboardType="numeric" />
+                <TextInput 
+                  placeholder="Calories" 
+                  placeholderTextColor="#ccc" 
+                  style={[styles.input,styles.smallInput]} 
+                  value={form.calories} 
+                  onChangeText={(v) => handleFormInput('calories', v)} 
+                  keyboardType="numeric" 
+                />
+                <TextInput 
+                  placeholder="Protein (g)" 
+                  placeholderTextColor="#ccc" 
+                  style={[styles.input,styles.smallInput]} 
+                  value={form.protein} 
+                  onChangeText={(v) => handleFormInput('protein', v)} 
+                  keyboardType="numeric" 
+                />
               </View>
               <View style={styles.rowInputs}>
-                <TextInput placeholder="Carbs (g)" placeholderTextColor="#ccc" style={[styles.input,styles.smallInput]} value={form.carbs} onChangeText={(v) => handleFormInput('carbs', v)} keyboardType="numeric" />
-                <TextInput placeholder="Fats (g)" placeholderTextColor="#ccc" style={[styles.input,styles.smallInput]} value={form.fats} onChangeText={(v) => handleFormInput('fats', v)} keyboardType="numeric" />
+                <TextInput 
+                  placeholder="Carbs (g)" 
+                  placeholderTextColor="#ccc" 
+                  style={[styles.input,styles.smallInput]} 
+                  value={form.carbs} 
+                  onChangeText={(v) => handleFormInput('carbs', v)} 
+                  keyboardType="numeric" 
+                />
+                <TextInput 
+                  placeholder="Fats (g)" 
+                  placeholderTextColor="#ccc" 
+                  style={[styles.input,styles.smallInput]} 
+                  value={form.fats} 
+                  onChangeText={(v) => handleFormInput('fats', v)} 
+                  keyboardType="numeric" 
+                />
               </View>
 
               <View style={styles.photoRow}>
-                <TouchableOpacity onPress={() => pickImage(false)} style={styles.photoBtn}><Text style={styles.photoBtnText}>Upload</Text></TouchableOpacity>
-                <TouchableOpacity onPress={takePhoto} style={styles.photoBtn}><Text style={styles.photoBtnText}>Take Photo</Text></TouchableOpacity>
-                {form.photo ? <Image source={{uri:form.photo}} style={styles.photoPreview} /> : <View style={styles.photoPreviewPlaceholder}><Icon name="camera" color="#ccc" size={24} /></View>}
+                <TouchableOpacity onPress={() => pickImage(false)} style={styles.photoBtn}>
+                  <Text style={styles.photoBtnText}>Upload</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={takePhoto} style={styles.photoBtn}>
+                  <Text style={styles.photoBtnText}>Take Photo</Text>
+                </TouchableOpacity>
+                {form.photo ? (
+                  <Image 
+                    source={{ uri: form.photo.uri }} 
+                    style={styles.photoPreview} 
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.photoPreviewPlaceholder}>
+                    <Icon name="camera" color="#ccc" size={24} />
+                  </View>
+                )}
               </View>
 
               <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={closeModal}><Text style={styles.cancelBtnText}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.cancelBtn} onPress={closeModal}>
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.saveBtn} onPress={handleAddOrEditMeal} disabled={loading}>
                   {loading ? <ActivityIndicator color="#001f3f" /> : <Text style={styles.saveBtnText}>{editMealId ? 'Save Changes' : 'Add Meal'}</Text>}
                 </TouchableOpacity>
@@ -743,6 +692,8 @@ const styles = StyleSheet.create({
   cancelBtnText: { color: '#ffffff', fontWeight: '700' },
   saveBtn: { flex: 1.5, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#FFC107', alignItems: 'center' },
   saveBtnText: { color: '#001f3f', fontWeight: '800' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20 },
+  loadingText: { color: '#aaa', marginTop: 10 },
 });
 
 export default DietLog;

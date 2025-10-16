@@ -6,6 +6,23 @@ import { useAuth0 } from "react-native-auth0";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import apiClient, { getToken, debugStorage } from "../api/apiClient";
 
+// Create a context for image selection state
+const ImageSelectionContext = createContext();
+
+// Custom hook to use the context
+export const useImageSelection = () => useContext(ImageSelectionContext);
+
+// Provider component
+export const ImageSelectionProvider = ({ children }) => {
+  const [isImageSelectionInProgress, setIsImageSelectionInProgress] = useState(false);
+  
+  return (
+    <ImageSelectionContext.Provider value={{ isImageSelectionInProgress, setIsImageSelectionInProgress }}>
+      {children}
+    </ImageSelectionContext.Provider>
+  );
+};
+
 const AuthContext = createContext();
 
 const getRedirectUri = () =>
@@ -15,6 +32,7 @@ const getRedirectUri = () =>
 
 export const AuthProvider = ({ children }) => {
   const { authorize, clearSession } = useAuth0();
+  const { isImageSelectionInProgress } = useImageSelection();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,6 +40,12 @@ export const AuthProvider = ({ children }) => {
   const [userProfile, setUserProfile] = useState(null);
 
   const checkAuthStatus = async () => {
+    // Skip authentication check if image selection is in progress
+    if (isImageSelectionInProgress) {
+      console.log("[DEBUG] Skipping authentication check during image selection");
+      return;
+    }
+    
     console.log("------------------------------------------");
     console.log("[DEBUG] 1. Starting checkAuthStatus...");
     setLoading(true);
@@ -73,6 +97,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const refreshAuthStatus = async () => {
+    // Skip authentication refresh if image selection is in progress
+    if (isImageSelectionInProgress) {
+      console.log("[DEBUG] Skipping authentication refresh during image selection");
+      return;
+    }
+    
     console.log("🔄 [DEBUG] Refresh triggered after profile update.");
     await checkAuthStatus();
   };

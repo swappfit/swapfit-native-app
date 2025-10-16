@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/<your-cloud-name>/image/upload";
-const UPLOAD_PRESET = "<your-upload-preset>";
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dlaij1gcp/image/upload';
+const UPLOAD_PRESET = 'rn_unsigned';
 
 export async function uploadToCloudinary(uri) {
   const formData = new FormData();
