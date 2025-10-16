@@ -2,104 +2,48 @@ import apiClient from './apiClient';
 import parseApiError from '../utils/parseApiError';
 import { Platform } from 'react-native';
 
-// Cloudinary configuration
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dlaij1gcp/image/upload";
-const UPLOAD_PRESET = "rn_unsigned";
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/dlaij1gcp/image/upload';
+const UPLOAD_PRESET = 'rn_unsigned';
 
-/**
- * Uploads an image to Cloudinary using fetch API
- * @param {object} image - The image object from react-native-image-picker
- * @returns {Promise<string>} - The secure URL of the uploaded image
- */
-const uploadImageToCloudinary = async (image) => {
-  console.log('📤 [Cloudinary] Attempting to upload image:', image);
-  
+// ✅ --- CLOUDINARY UPLOAD FUNCTION --- ✅
+const uploadToCloudinary = async (image) => {
+  console.log('📤 [Cloudinary] Attempting to upload image...');
   if (!image || !image.uri) {
-    const error = new Error('Invalid image file provided for upload.');
-    console.error('❌ [Cloudinary] Error:', error.message);
-    throw error;
+    throw new Error('Invalid image file provided for upload.');
   }
 
-  // Create FormData
+  // Handle iOS file URI and ensure correct file type/name
+  const uri = image.uri;
+  const type = image.type || `image/${uri.split('.').pop()}`;
+  const name = image.fileName || `photo_${Date.now()}.${uri.split('.').pop()}`;
+  
   const formData = new FormData();
-  
-  // Handle different image formats
-  let uri = image.uri;
-  
-  // Fix for Android file:// URI
-  if (Platform.OS === 'android' && uri.startsWith('file://')) {
-    uri = uri.replace('file://', '');
-  }
-  
-  // Get file type and name
-  const uriParts = uri.split('.');
-  const fileType = uriParts[uriParts.length - 1];
-  const fileName = image.fileName || `upload-${Date.now()}.${fileType}`;
-  
-  // Add file to FormData with proper type
   formData.append('file', {
-    uri: uri,
-    type: image.type || `image/${fileType}`,
-    name: fileName,
+    uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+    type: type,
+    name: name,
   });
-  
-  // Add upload preset
   formData.append('upload_preset', UPLOAD_PRESET);
-  formData.append('resource_type', 'auto');
-  
-  // Add timestamp to prevent caching issues
-  formData.append('timestamp', Date.now().toString());
-
-  console.log('📤 [Cloudinary] FormData prepared, starting upload...');
-  console.log('📤 [Cloudinary] File info:', { uri, type: image.type || `image/${fileType}`, name: fileName });
+  formData.append('cloud_name', 'dlaij1gcp');
 
   try {
-    // Add timeout to the fetch request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased to 60 seconds
-
     const response = await fetch(CLOUDINARY_URL, {
       method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        // Don't set Content-Type header when using FormData, it will be set automatically with boundary
-      },
       body: formData,
-      signal: controller.signal,
     });
 
-    clearTimeout(timeoutId);
-
-    console.log('📤 [Cloudinary] Response status:', response.status);
-    
-    // Check if response is OK before parsing JSON
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ [Cloudinary] Error response:', errorText);
-      
-      try {
-        // Try to parse as JSON first
-        const errorData = JSON.parse(errorText);
-        const errorMessage = errorData.error?.message || errorData.message || `Cloudinary returned status: ${response.status}`;
-        throw new Error(errorMessage);
-      } catch (parseError) {
-        // If not JSON, use the text directly
-        throw new Error(`Cloudinary error: ${errorText}`);
-      }
-    }
-    
     const data = await response.json();
-    console.log('📤 [Cloudinary] Response data:', data);
 
-    if (!data.secure_url) {
-      const error = new Error('No secure URL returned from Cloudinary');
-      console.error('❌ [Cloudinary] Error:', error.message);
-      throw error;
+    if (!response.ok) {
+      const errorMessage = data.error?.message || `Cloudinary returned a non-200 status: ${response.status}`;
+      console.error('❌ [Cloudinary] Upload failed:', errorMessage);
+      throw new Error(errorMessage);
     }
 
     console.log('✅ [Cloudinary] Upload successful:', data.secure_url);
     return data.secure_url;
   } catch (error) {
+<<<<<<< HEAD
     console.error('❌ [Cloudinary] Upload error:', error);
     
     if (error.name === 'AbortError') {
@@ -108,10 +52,15 @@ const uploadImageToCloudinary = async (image) => {
     
     // Re-throw the original error with more context
     throw new Error(`Image upload failed: ${error.message}`);
+=======
+    console.error('❌ [Cloudinary] A critical error occurred during upload:', error);
+    throw error;
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   }
 };
 
 /**
+<<<<<<< HEAD
  * Alternative upload method using XMLHttpRequest for better compatibility
  * @param {object} image - The image object from react-native-image-picker
  * @returns {Promise<string>} - The secure URL of the uploaded image
@@ -202,6 +151,9 @@ const uploadImageToCloudinaryXHR = async (image) => {
 
 /**
  * @description Saves a new diet/meal entry to the backend.
+=======
+ * @description Saves a new diet/meal entry to the backend with image upload.
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
  * @param {object} dietData - The diet form data from the component.
  * @returns {Promise<{success: boolean, message: string, data: object|null}>} A structured response.
  */
@@ -209,30 +161,59 @@ export const saveDietEntry = async (dietData) => {
   try {
     console.log('[DietService] Saving diet entry:', dietData);
     
+<<<<<<< HEAD
     // Validate required fields
     if (!dietData.mealName || !dietData.calories) {
       throw new Error('Meal name and calories are required');
+=======
+    let photoUrl = null;
+    
+    // Upload image to Cloudinary if provided
+    if (dietData.photo) {
+      try {
+        photoUrl = await uploadToCloudinary(dietData.photo);
+        console.log('[DietService] Image uploaded successfully:', photoUrl);
+      } catch (uploadError) {
+        console.warn('[DietService] Image upload failed:', uploadError.message);
+        // Continue without the image, but log the warning
+      }
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
     }
     
     // Transform the data to match backend expectations
     const transformedData = {
+<<<<<<< HEAD
       mealName: dietData.mealName.trim(),
+=======
+      mealName: dietData.mealName,
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
       mealType: dietData.mealType || 'breakfast',
       calories: parseInt(dietData.calories) || 0,
       protein: parseInt(dietData.protein) || 0,
       carbs: parseInt(dietData.carbs) || 0,
       fats: parseInt(dietData.fats) || 0,
+<<<<<<< HEAD
       fiber: parseInt(dietData.fiber) || null,
       sugar: parseInt(dietData.sugar) || null,
       photoUrl: dietData.photoUrl || null,
       notes: dietData.notes || '',
+=======
+      fiber: parseInt(dietData.fiber) || 0,
+      sugar: parseInt(dietData.sugar) || 0,
+      notes: dietData.notes || '',
+      photo: photoUrl, // Include the Cloudinary URL
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
     };
 
     console.log('[DietService] Transformed data:', transformedData);
     
     const response = await apiClient.post('/diet/logs', transformedData);
     
+<<<<<<< HEAD
     console.log('[DietService] API response:', response.data);
+=======
+    console.log('[DietService] Raw response:', response.data);
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
     
     return {
       success: true,
@@ -250,9 +231,67 @@ export const saveDietEntry = async (dietData) => {
   }
 };
 
+<<<<<<< HEAD
 // Attach the upload functions to the saveDietEntry object for easy access
 saveDietEntry.uploadImageToCloudinary = uploadImageToCloudinary;
 saveDietEntry.uploadImageToCloudinaryXHR = uploadImageToCloudinaryXHR;
+=======
+/**
+ * @description Updates an existing diet log entry with optional image upload.
+ * @param {string} logId - The ID of the log to update.
+ * @param {object} updateData - The data to update.
+ * @returns {Promise<{success: boolean, message: string, data: object|null}>} A structured response.
+ */
+export const updateDietLog = async (logId, updateData) => {
+  try {
+    console.log('[DietService] Updating diet log:', logId, updateData);
+    
+    let photoUrl = updateData.photo;
+    
+    // If a new image is provided and it's a local URI (not already a URL), upload it
+    if (updateData.photo && !updateData.photo.startsWith('http')) {
+      try {
+        photoUrl = await uploadToCloudinary(updateData.photo);
+        console.log('[DietService] New image uploaded successfully:', photoUrl);
+      } catch (uploadError) {
+        console.warn('[DietService] New image upload failed:', uploadError.message);
+        // Keep the existing photo if any
+      }
+    }
+    
+    // Prepare update data
+    const transformedData = {
+      ...updateData,
+      photo: photoUrl,
+    };
+    
+    // Remove undefined values
+    Object.keys(transformedData).forEach(key => {
+      if (transformedData[key] === undefined) {
+        delete transformedData[key];
+      }
+    });
+    
+    const response = await apiClient.put(`/diet/logs/${logId}`, transformedData);
+    
+    console.log('[DietService] Raw response:', response.data);
+    
+    return {
+      success: true,
+      message: 'Diet log updated successfully!',
+      data: response.data.data || response.data,
+    };
+  } catch (error) {
+    console.error('[DietService] Error updating diet log:', error);
+    const errorMessage = parseApiError(error);
+    return {
+      success: false,
+      message: errorMessage,
+      data: null,
+    };
+  }
+};
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
 
 /**
  * @description Fetches diet logs for a specific date.
@@ -284,6 +323,7 @@ export const getDietLogsByDate = async (date) => {
 };
 
 /**
+<<<<<<< HEAD
  * @description Updates an existing diet log entry.
  * @param {string} logId - The ID of the log to update.
  * @param {object} updateData - The data to update.
@@ -314,6 +354,8 @@ export const updateDietLog = async (logId, updateData) => {
 };
 
 /**
+=======
+>>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
  * @description Deletes a diet log entry.
  * @param {string} logId - The ID of the log to delete.
  * @returns {Promise<{success: boolean, message: string, data: object|null}>} A structured response.
