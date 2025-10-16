@@ -1,3 +1,4 @@
+// src/pages/Store.jsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,6 +14,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Linking, // ✅ 1. IMPORT LINKING
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -20,7 +22,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Events from './Events';
 import { fetchProducts } from '../../api/shopService';
 import { fetchCart, addToCart, removeFromCart, updateCartItem } from '../../api/cartService';
-
+import apiClient from '../../api/apiClient';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2;
 
@@ -198,6 +200,34 @@ const Store = () => {
     });
   };
 
+  // ✅ 2. NEW: The Checkout Handler
+  const handleCheckout = async () => {
+    try {
+      console.log('[STORE] Initiating checkout...');
+      Alert.alert('Processing', 'Creating your secure checkout page...');
+
+      // Call your new backend endpoint
+      const response = await apiClient.post('/cart/checkout');
+      const { checkoutUrl } = response.data.data;
+
+      if (checkoutUrl) {
+        console.log('[STORE] Opening checkout URL:', checkoutUrl);
+        // Use React Native's Linking API to open the URL in the device's browser
+        const supported = await Linking.canOpenURL(checkoutUrl);
+        if (supported) {
+          await Linking.openURL(checkoutUrl);
+        } else {
+          Alert.alert('Error', `Unable to open this URL: ${checkoutUrl}`);
+        }
+      } else {
+        throw new Error('Checkout URL not received from server.');
+      }
+    } catch (error) {
+      console.error('[STORE] Checkout failed:', error);
+      Alert.alert('Checkout Failed', 'Could not initiate checkout. Please try again.');
+    }
+  };
+
   // --- RENDER FUNCTIONS ---
   const renderProductCard = ({ item: product }) => (
     <TouchableOpacity style={[styles.productCard, { width: CARD_WIDTH }]}>
@@ -351,6 +381,7 @@ const Store = () => {
     </ScrollView>
   );
 
+  // ✅ 3. UPDATED: The Cart Modal with the Checkout Button
   const renderCartModal = () => (
     <Modal
       visible={isCartVisible}
@@ -409,7 +440,7 @@ const Store = () => {
 
               <View style={styles.cartFooter}>
                   <Text style={styles.cartTotalText}>Total: ₹{getCartTotal()}</Text>
-                  <TouchableOpacity style={styles.checkoutButton}>
+                  <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
                       <View style={styles.buttonSolidBlue}>
                          <Text style={styles.applyButtonText}>Checkout</Text>
                       </View>

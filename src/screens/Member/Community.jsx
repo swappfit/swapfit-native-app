@@ -591,5 +591,4 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.5 },
   modalButtonText: { color: '#001f3f', fontWeight: 'bold', fontSize: 16 },
 });
-
 export default Community;
