@@ -17,13 +17,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   PermissionsAndroid,
-<<<<<<< HEAD
-} from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import ImagePicker from 'react-native-image-picker';
-import { saveDietEntry, getDietLogsByDate } from '../../api/dietService';
-import { uploadToCloudinary } from '../../services/cloudinaryService';
-=======
   AppState,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -31,17 +24,13 @@ import Video from 'react-native-video';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useImageSelection } from '../../context/AuthContext';
 import { saveDietEntry, getDietLogsByDate, updateDietLog, deleteDietLog } from '../../api/dietService';
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
 
 const { width } = Dimensions.get('window');
 
 const DietLog = ({ navigation }) => {
-<<<<<<< HEAD
-=======
   // Get the image selection context
   const { isImageSelectionInProgress, setIsImageSelectionInProgress } = useImageSelection();
   
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   // --- STATE MANAGEMENT ---
   const [totalCalories, setTotalCalories] = useState(0);
   const [totalProtein, setTotalProtein] = useState(0);
@@ -63,12 +52,6 @@ const DietLog = ({ navigation }) => {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-<<<<<<< HEAD
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [editMealId, setEditMealId] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-
-=======
   const [editMealId, setEditMealId] = useState(null);
   const [fetching, setFetching] = useState(false);
 
@@ -115,7 +98,6 @@ const DietLog = ({ navigation }) => {
 
   // --- FIX APPLIED HERE ---
   // The mealType is now initialized in lowercase to match the backend requirement.
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   const [form, setForm] = useState({
     mealName: '',
     calories: '',
@@ -123,36 +105,6 @@ const DietLog = ({ navigation }) => {
     carbs: '',
     fats: '',
     photo: null,
-<<<<<<< HEAD
-    photoUrl: null,
-    mealType: 'breakfast',
-  });
-  
-  const isMountedRef = useRef(true);
-  const navigationRef = useRef(navigation);
-  
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-  
-  // Fetch today's diet logs
-  useEffect(() => {
-    fetchTodayLogs();
-  }, []);
-
-  const fetchTodayLogs = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const response = await getDietLogsByDate(today);
-      
-      if (response.success && response.data) {
-        const fetchedLogs = response.data.logs || [];
-        
-        const groupedLogs = {
-=======
     mealType: 'breakfast', // Default meal type is now lowercase
   });
 
@@ -174,26 +126,12 @@ const DietLog = ({ navigation }) => {
         
         // Transform the data to match our local state structure
         const transformedMeals = {
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
           Breakfast: [],
           Lunch: [],
           Dinner: [],
           Snacks: [],
         };
         
-<<<<<<< HEAD
-        fetchedLogs.forEach(log => {
-          const mealTypeKey = log.mealType.charAt(0).toUpperCase() + log.mealType.slice(1);
-          if (groupedLogs[mealTypeKey]) {
-            groupedLogs[mealTypeKey].push({
-              id: log.id,
-              name: log.mealName,
-              calories: log.calories,
-              protein: log.protein || 0,
-              carbs: log.carbs || 0,
-              fats: log.fats || 0,
-              photoUrl: log.photoUrl,
-=======
         // FIX: Handle different response structures
         const logsArray = response.data.logs || response.data || [];
         
@@ -209,22 +147,10 @@ const DietLog = ({ navigation }) => {
               fats: log.fats,
               // FIX: Ensure photo is a string or null
               photo: log.photoUrl || log.photo || null,
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
             });
           }
         });
         
-<<<<<<< HEAD
-        if (isMountedRef.current) {
-          setMeals(groupedLogs);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching today logs:', error);
-    }
-  };
-  
-=======
         setMeals(transformedMeals);
       }
     } catch (error) {
@@ -239,7 +165,6 @@ const DietLog = ({ navigation }) => {
     fetchTodayDietLogs();
   }, []);
 
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   useEffect(() => {
     let cal = 0, prot = 0, carb = 0, fat = 0;
     for (const mealType in meals) {
@@ -250,19 +175,10 @@ const DietLog = ({ navigation }) => {
         fat += parseInt(meal.fats) || 0;
       });
     }
-<<<<<<< HEAD
-    if (isMountedRef.current) {
-      setTotalCalories(cal);
-      setTotalProtein(prot);
-      setTotalCarbs(carb);
-      setTotalFats(fat);
-    }
-=======
     setTotalCalories(cal);
     setTotalProtein(prot);
     setTotalCarbs(carb);
     setTotalFats(fat);
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   }, [meals]);
 
   // --- HELPER COMPONENTS ---
@@ -279,12 +195,6 @@ const DietLog = ({ navigation }) => {
     );
   };
 
-<<<<<<< HEAD
-  const MealItem = ({ item, mealType }) => (
-    <View style={styles.mealListItem}>
-      <View style={styles.mealThumb}>
-        {item.photoUrl ? <Image source={{ uri: item.photoUrl }} style={styles.mealImage} /> : <Text style={styles.mealPlaceholderIcon}>🍽</Text>}
-=======
   // FIX: Added proper image handling in MealItem
   const MealItem = ({ item, mealType }) => (
     <View style={styles.mealListItem}>
@@ -298,7 +208,6 @@ const DietLog = ({ navigation }) => {
         ) : (
           <Text style={styles.mealPlaceholderIcon}>🍽</Text>
         )}
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
       </View>
       <View style={styles.mealInfo}>
         <Text style={styles.mealName}>{item.name}</Text>
@@ -317,54 +226,6 @@ const DietLog = ({ navigation }) => {
 
   // --- FUNCTIONS ---
   const handleFormInput = (key, value) => {
-<<<<<<< HEAD
-    if (isMountedRef.current) {
-      setForm(prev => ({ ...prev, [key]: value }));
-    }
-  };
-
-  const resetForm = () => {
-    if (isMountedRef.current) {
-      setForm({
-        mealName: '', 
-        calories: '', 
-        protein: '', 
-        carbs: '', 
-        fats: '', 
-        photo: null, 
-        photoUrl: null,
-        mealType: 'breakfast',
-      });
-      setEditMealId(null);
-    }
-  };
-
-  const openEditModal = (mealType, meal) => {
-    if (isMountedRef.current) {
-      setForm({
-        mealName: meal.name,
-        calories: meal.calories.toString(),
-        protein: meal.protein.toString(),
-        carbs: meal.carbs.toString(),
-        fats: meal.fats.toString(),
-        photo: null,
-        photoUrl: meal.photoUrl,
-        mealType: mealType.toLowerCase(),
-      });
-      setEditMealId(meal.id);
-      setModalVisible(true);
-    }
-  };
-
-  const handleDeleteMeal = (mealType, id) => {
-    const item = meals[mealType].find(m => m.id === id);
-    if (!item) return;
-    Alert.alert(`Delete meal`, `Delete ${item.name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: () => {
-          if (isMountedRef.current) {
-=======
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
@@ -405,19 +266,15 @@ const DietLog = ({ navigation }) => {
             await deleteDietLog(id);
             
             // Update local state
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
             setMeals(prev => ({
               ...prev,
               [mealType]: prev[mealType].filter(m => m.id !== id),
             }));
-<<<<<<< HEAD
-=======
             
             Alert.alert('Success', 'Meal deleted successfully!');
           } catch (error) {
             console.error('Error deleting meal:', error);
             Alert.alert('Error', 'Failed to delete meal. Please try again.');
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
           }
         },
       },
@@ -428,108 +285,6 @@ const DietLog = ({ navigation }) => {
     if (!form.mealName.trim() || !form.calories.trim()) {
       return Alert.alert('Validation Error', 'Please enter at least a meal name and calories.');
     }
-<<<<<<< HEAD
-    
-    if (isSaving) return;
-    
-    setIsSaving(true);
-    setLoading(true);
-
-    try {
-      console.log('Starting meal save process...');
-      
-      // Upload image if there's a new photo
-      let photoUrl = form.photoUrl;
-      if (form.photo && !form.photoUrl) {
-        console.log('Uploading new image...');
-        setUploadingImage(true);
-        
-        try {
-          photoUrl = await uploadToCloudinary(form.photo.uri);
-          console.log('Image uploaded successfully:', photoUrl);
-          
-          if (isMountedRef.current) {
-            setForm(prev => ({ ...prev, photoUrl }));
-          }
-        } catch (uploadError) {
-          console.error('Image upload error:', uploadError);
-          Alert.alert('Upload Error', uploadError.message || 'Failed to upload image. Please try again.');
-          setUploadingImage(false);
-          setLoading(false);
-          setIsSaving(false);
-          return;
-        } finally {
-          if (isMountedRef.current) {
-            setUploadingImage(false);
-          }
-        }
-      }
-
-      const mealData = {
-        id: editMealId || Date.now().toString(),
-        name: form.mealName,
-        calories: parseInt(form.calories) || 0,
-        protein: parseInt(form.protein) || 0,
-        carbs: parseInt(form.carbs) || 0,
-        fats: parseInt(form.fats) || 0,
-        photoUrl: photoUrl,
-      };
-      
-      const mealTypeKey = form.mealType.charAt(0).toUpperCase() + form.mealType.slice(1);
-
-      const apiData = {
-        mealName: form.mealName,
-        calories: parseInt(form.calories) || 0,
-        protein: parseInt(form.protein) || 0,
-        carbs: parseInt(form.carbs) || 0,
-        fats: parseInt(form.fats) || 0,
-        mealType: form.mealType,
-        photoUrl: photoUrl,
-      };
-
-      console.log('Saving diet entry to backend...');
-      const response = await saveDietEntry(apiData);
-
-      if (response.success) {
-        console.log('Diet entry saved successfully');
-        
-        if (isMountedRef.current) {
-          if (editMealId) {
-            setMeals(prev => ({
-              ...prev,
-              [mealTypeKey]: prev[mealTypeKey].map(item => 
-                item.id === editMealId ? mealData : item
-              ),
-            }));
-          } else {
-            setMeals(prev => ({
-              ...prev,
-              [mealTypeKey]: [mealData, ...prev[mealTypeKey]],
-            }));
-          }
-          
-          Alert.alert('Success', 'Meal logged successfully! 🎉', [
-            { text: 'OK', onPress: () => closeModal() }
-          ]);
-        }
-      } else {
-        console.error('Backend error:', response.message);
-        if (isMountedRef.current) {
-          Alert.alert('Warning', 'Failed to save meal. ' + (response.message || 'Please try again later.'));
-        }
-      }
-    } catch (error) {
-      console.error('Save diet error:', error);
-      if (isMountedRef.current) {
-        Alert.alert('Error', 'Failed to save meal. ' + (error.message || 'Please try again.'));
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-        setUploadingImage(false);
-        setIsSaving(false);
-      }
-=======
     setLoading(true);
 
     try {
@@ -592,20 +347,12 @@ const DietLog = ({ navigation }) => {
       );
     } finally {
       setLoading(false);
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
     }
   };
 
   const closeModal = () => {
-<<<<<<< HEAD
-    if (!isSaving && !uploadingImage && isMountedRef.current) {
-      setModalVisible(false);
-      resetForm();
-    }
-=======
     setModalVisible(false);
     resetForm();
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   }
 
   // --- IMAGE PICKER LOGIC ---
@@ -624,74 +371,6 @@ const DietLog = ({ navigation }) => {
     } else return true;
   };
 
-<<<<<<< HEAD
-  const pickImage = async (fromCamera = false) => {
-    if (isSaving || uploadingImage) {
-      console.log('Cannot pick image while saving or uploading');
-      return;
-    }
-    
-    // Check permissions for camera
-    if (fromCamera) {
-      const hasPermission = await requestCameraPermission();
-      if (!hasPermission) {
-        Alert.alert('Permission Required', 'Camera permission is required to take photos.');
-        return;
-      }
-    }
-    
-    const options = { 
-      mediaType: 'photo', 
-      quality: 0.7,
-      includeBase64: false,
-      includeExtra: true,
-    };
-    
-    try {
-      console.log('Picking image from', fromCamera ? 'camera' : 'gallery');
-      
-      // Check if ImagePicker is available
-      if (!ImagePicker || !ImagePicker.launchCamera || !ImagePicker.launchImageLibrary) {
-        console.error('ImagePicker not properly imported');
-        Alert.alert('Error', 'Image picker not available. Please restart the app.');
-        return;
-      }
-      
-      const result = await new Promise((resolve) => {
-        const action = fromCamera ? ImagePicker.launchCamera : ImagePicker.launchImageLibrary;
-        action(options, resolve);
-      });
-      
-      if (result.didCancel) {
-        console.log('User cancelled image picker');
-        return;
-      }
-      
-      if (result.errorCode) {
-        console.error('ImagePicker error:', result.errorMessage);
-        Alert.alert('Error', result.errorMessage || 'Could not access camera or gallery.');
-        return;
-      }
-      
-      if (result.assets && result.assets.length > 0) {
-        console.log('Image selected:', result.assets[0]);
-        if (isMountedRef.current) {
-          setForm(prev => ({ 
-            ...prev, 
-            photo: result.assets[0],
-            photoUrl: null 
-          }));
-        }
-      } else {
-        Alert.alert('Error', 'No photo was selected.');
-      }
-    } catch (error) {
-      console.error('ImagePicker error:', error);
-      Alert.alert('Error', 'Could not access camera or gallery.');
-    }
-  };
-
-=======
   // ✅ --- FIXED IMAGE PICKER FUNCTION --- ✅
   const pickImage = async (fromCamera = false) => {
     // Check if component is still mounted
@@ -743,7 +422,6 @@ const DietLog = ({ navigation }) => {
     if (hasPermission) pickImage(true);
   };
 
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   const mockSyncWorkout = () => {
     const burned = 320; 
     setExerciseCalories(p => p + burned);
@@ -756,16 +434,6 @@ const DietLog = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#001f3f" />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-<<<<<<< HEAD
-        {/* Header */}
-        <View style={styles.mainVideoContainer}>
-          <View style={styles.videoPlaceholder}>
-            <Icon name="food" size={60} color="#FFC107" />
-          </View>
-          <View style={styles.videoOverlay}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigationRef.current.goBack()}>
-              <Icon name="arrow-left" size={24} color="#FFFFFF" />
-=======
         {/* Video Header */}
         <View style={styles.mainVideoContainer}>
           <Video 
@@ -778,7 +446,6 @@ const DietLog = ({ navigation }) => {
           <View style={styles.videoOverlay}>
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <Icon name="arrow-left" size={24} color="#FFFFFF" />
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
             </TouchableOpacity>
             <Text style={styles.workoutTitle}>Fuel Your Gains</Text>
             <Text style={styles.workoutSubtitle}>Track calories & macros to achieve your goals</Text>
@@ -791,24 +458,9 @@ const DietLog = ({ navigation }) => {
             <View style={styles.caloriesCard}>
               <Text style={styles.cardHeading}>Calories</Text>
               <View style={styles.caloriesNumRow}>
-<<<<<<< HEAD
-                <View style={styles.caloriesNumCol}>
-                  <Text style={styles.caloriesValue}>{totalCalories}</Text>
-                  <Text style={styles.caloriesLabel}>Food</Text>
-                </View>
-                <View style={styles.caloriesNumCol}>
-                  <Text style={styles.caloriesValue}>{exerciseCalories}</Text>
-                  <Text style={styles.caloriesLabel}>Exercise</Text>
-                </View>
-                <View style={styles.caloriesNumCol}>
-                  <Text style={styles.caloriesValueRemaining}>{remainingCalories}</Text>
-                  <Text style={styles.caloriesLabel}>Remaining</Text>
-                </View>
-=======
                 <View style={styles.caloriesNumCol}><Text style={styles.caloriesValue}>{totalCalories}</Text><Text style={styles.caloriesLabel}>Food</Text></View>
                 <View style={styles.caloriesNumCol}><Text style={styles.caloriesValue}>{exerciseCalories}</Text><Text style={styles.caloriesLabel}>Exercise</Text></View>
                 <View style={styles.caloriesNumCol}><Text style={styles.caloriesValueRemaining}>{remainingCalories}</Text><Text style={styles.caloriesLabel}>Remaining</Text></View>
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
               </View>
               <View style={styles.calorieProgressTrack}>
                 <View style={[styles.calorieProgressFill, { width: `${dailyCalorieGoal > 0 ? Math.min(100, (totalCalories / dailyCalorieGoal) * 100) : 0}%` }]} />
@@ -827,11 +479,7 @@ const DietLog = ({ navigation }) => {
 
         {/* Action Row */}
         <View style={styles.actionRow}>
-<<<<<<< HEAD
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => setModalVisible(true)}>
-=======
           <TouchableOpacity style={styles.primaryBtn} onPress={() => setModalVisible(true)} disabled={fetching}>
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
             <Text style={styles.primaryBtnText}>+ Add Meal</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.ghostBtn} onPress={mockSyncWorkout}>
@@ -842,29 +490,6 @@ const DietLog = ({ navigation }) => {
         {/* Meals Lists */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today's Meals</Text>
-<<<<<<< HEAD
-          {Object.keys(meals).map(mealType => (
-            <View key={mealType} style={{ marginBottom: 12 }}>
-              <View style={styles.mealHeaderRow}>
-                <Text style={styles.mealHeaderTitle}>{mealType}</Text>
-                <Text style={styles.mealHeaderCount}>{meals[mealType].length} items</Text>
-              </View>
-              {meals[mealType].length === 0 ? (
-                <View style={styles.emptyMealRow}>
-                  <Text style={styles.emptyMealText}>No items logged for {mealType}</Text>
-                </View>
-              ) : (
-                <FlatList 
-                  data={meals[mealType]} 
-                  keyExtractor={i => i.id} 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
-                  renderItem={({ item }) => <MealItem item={item} mealType={mealType} />} 
-                />
-              )}
-            </View>
-          ))}
-=======
           {fetching ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#FFC107" />
@@ -891,42 +516,25 @@ const DietLog = ({ navigation }) => {
               </View>
             ))
           )}
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
         </View>
       </ScrollView>
 
       {/* Add/Edit Meal Modal */}
-<<<<<<< HEAD
-      <Modal 
-        visible={modalVisible} 
-        animationType="slide" 
-        transparent
-        onRequestClose={closeModal}
-      >
-=======
       <Modal visible={modalVisible} animationType="slide" transparent>
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
         <KeyboardAvoidingView style={styles.modalWrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{editMealId ? 'Edit Meal' : 'Add Meal'}</Text>
               
-<<<<<<< HEAD
-=======
               {/* --- FIX APPLIED HERE --- */}
               {/* The onPress handler now converts the meal type to lowercase before saving it. */}
               {/* The style condition is also updated to work with a lowercase state value. */}
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
               <View style={styles.mealTypeRow}>
                 {['Breakfast','Lunch','Dinner','Snacks'].map(t => (
                   <TouchableOpacity 
                     key={t} 
                     style={[styles.mealTypeBtn, form.mealType === t.toLowerCase() && styles.mealTypeBtnActive]} 
                     onPress={() => handleFormInput('mealType', t.toLowerCase())}
-<<<<<<< HEAD
-                    disabled={isSaving || uploadingImage}
-=======
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
                   >
                     <Text style={[styles.mealTypeBtnText, form.mealType === t.toLowerCase() && styles.mealTypeBtnTextActive]}>
                       {t}
@@ -940,12 +548,7 @@ const DietLog = ({ navigation }) => {
                 placeholderTextColor="#ccc" 
                 style={styles.input} 
                 value={form.mealName} 
-<<<<<<< HEAD
-                onChangeText={(v) => handleFormInput('mealName', v)}
-                editable={!isSaving && !uploadingImage}
-=======
                 onChangeText={(v) => handleFormInput('mealName', v)} 
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
               />
 
               <View style={styles.rowInputs}>
@@ -955,12 +558,7 @@ const DietLog = ({ navigation }) => {
                   style={[styles.input,styles.smallInput]} 
                   value={form.calories} 
                   onChangeText={(v) => handleFormInput('calories', v)} 
-<<<<<<< HEAD
-                  keyboardType="numeric"
-                  editable={!isSaving && !uploadingImage}
-=======
                   keyboardType="numeric" 
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
                 />
                 <TextInput 
                   placeholder="Protein (g)" 
@@ -968,12 +566,7 @@ const DietLog = ({ navigation }) => {
                   style={[styles.input,styles.smallInput]} 
                   value={form.protein} 
                   onChangeText={(v) => handleFormInput('protein', v)} 
-<<<<<<< HEAD
-                  keyboardType="numeric"
-                  editable={!isSaving && !uploadingImage}
-=======
                   keyboardType="numeric" 
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
                 />
               </View>
               <View style={styles.rowInputs}>
@@ -983,12 +576,7 @@ const DietLog = ({ navigation }) => {
                   style={[styles.input,styles.smallInput]} 
                   value={form.carbs} 
                   onChangeText={(v) => handleFormInput('carbs', v)} 
-<<<<<<< HEAD
-                  keyboardType="numeric"
-                  editable={!isSaving && !uploadingImage}
-=======
                   keyboardType="numeric" 
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
                 />
                 <TextInput 
                   placeholder="Fats (g)" 
@@ -996,44 +584,11 @@ const DietLog = ({ navigation }) => {
                   style={[styles.input,styles.smallInput]} 
                   value={form.fats} 
                   onChangeText={(v) => handleFormInput('fats', v)} 
-<<<<<<< HEAD
-                  keyboardType="numeric"
-                  editable={!isSaving && !uploadingImage}
-=======
                   keyboardType="numeric" 
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
                 />
               </View>
 
               <View style={styles.photoRow}>
-<<<<<<< HEAD
-                <TouchableOpacity 
-                  onPress={() => pickImage(false)} 
-                  style={[styles.photoBtn, (isSaving || uploadingImage) && styles.disabledBtn]}
-                  disabled={isSaving || uploadingImage}
-                >
-                  <Text style={styles.photoBtnText}>Gallery</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => pickImage(true)} 
-                  style={[styles.photoBtn, (isSaving || uploadingImage) && styles.disabledBtn]}
-                  disabled={isSaving || uploadingImage}
-                >
-                  <Text style={styles.photoBtnText}>Camera</Text>
-                </TouchableOpacity>
-                {form.photo ? (
-                  <View style={styles.photoPreviewContainer}>
-                    <Image source={{uri:form.photo.uri}} style={styles.photoPreview} />
-                    {uploadingImage && (
-                      <View style={styles.uploadingOverlay}>
-                        <ActivityIndicator color="#FFC107" size="small" />
-                        <Text style={styles.uploadingText}>Uploading...</Text>
-                      </View>
-                    )}
-                  </View>
-                ) : form.photoUrl ? (
-                  <Image source={{uri:form.photoUrl}} style={styles.photoPreview} />
-=======
                 <TouchableOpacity onPress={() => pickImage(false)} style={styles.photoBtn}>
                   <Text style={styles.photoBtnText}>Upload</Text>
                 </TouchableOpacity>
@@ -1046,7 +601,6 @@ const DietLog = ({ navigation }) => {
                     style={styles.photoPreview} 
                     resizeMode="cover"
                   />
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
                 ) : (
                   <View style={styles.photoPreviewPlaceholder}>
                     <Icon name="camera" color="#ccc" size={24} />
@@ -1055,30 +609,11 @@ const DietLog = ({ navigation }) => {
               </View>
 
               <View style={styles.modalActions}>
-<<<<<<< HEAD
-                <TouchableOpacity 
-                  style={[styles.cancelBtn, (isSaving || uploadingImage) && styles.disabledBtn]} 
-                  onPress={closeModal}
-                  disabled={isSaving || uploadingImage}
-                >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.saveBtn} 
-                  onPress={handleAddOrEditMeal} 
-                  disabled={isSaving || uploadingImage}
-                >
-                  {isSaving || uploadingImage ? 
-                    <ActivityIndicator color="#001f3f" /> : 
-                    <Text style={styles.saveBtnText}>{editMealId ? 'Save Changes' : 'Add Meal'}</Text>
-                  }
-=======
                 <TouchableOpacity style={styles.cancelBtn} onPress={closeModal}>
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.saveBtn} onPress={handleAddOrEditMeal} disabled={loading}>
                   {loading ? <ActivityIndicator color="#001f3f" /> : <Text style={styles.saveBtnText}>{editMealId ? 'Save Changes' : 'Add Meal'}</Text>}
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
                 </TouchableOpacity>
               </View>
             </View>
@@ -1093,16 +628,7 @@ const DietLog = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#001f3f' },
   mainVideoContainer: { width: '100%', height: 250 },
-<<<<<<< HEAD
-  videoPlaceholder: { 
-    ...StyleSheet.absoluteFillObject, 
-    backgroundColor: '#002b5c', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-=======
   video: { ...StyleSheet.absoluteFillObject },
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   videoOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,31,57,0.6)', padding: 16, justifyContent: 'flex-end' },
   backButton: { position: 'absolute', top: 16, left: 16, padding: 8 },
   workoutTitle: { fontSize: 28, fontWeight: '800', color: '#ffffff', marginBottom: 6, marginTop: 40 },
@@ -1159,36 +685,15 @@ const styles = StyleSheet.create({
   photoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 16 },
   photoBtn: { backgroundColor: '#002b5c', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, marginRight: 10 },
   photoBtnText: { color: '#FFC107', fontWeight: '700' },
-<<<<<<< HEAD
-  photoPreviewContainer: { position: 'relative' },
   photoPreview: { width: 56, height: 56, borderRadius: 10 },
-  uploadingOverlay: { 
-    position: 'absolute', 
-    top: 0, 
-    left: 0, 
-    right: 0, 
-    bottom: 0, 
-    backgroundColor: 'rgba(0,0,0,0.7)', 
-    borderRadius: 10, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  uploadingText: { color: '#FFC107', fontSize: 10, marginTop: 4 },
-=======
-  photoPreview: { width: 56, height: 56, borderRadius: 10 },
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
   photoPreviewPlaceholder: { width: 56, height: 56, borderRadius: 10, backgroundColor: '#002b5c', alignItems: 'center', justifyContent: 'center' },
   modalActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, gap: 10 },
   cancelBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#002b5c', alignItems: 'center' },
   cancelBtnText: { color: '#ffffff', fontWeight: '700' },
   saveBtn: { flex: 1.5, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#FFC107', alignItems: 'center' },
   saveBtnText: { color: '#001f3f', fontWeight: '800' },
-<<<<<<< HEAD
-  disabledBtn: { opacity: 0.5 },
-=======
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 20 },
   loadingText: { color: '#aaa', marginTop: 10 },
->>>>>>> 09b60c1281ad49f3ac2025051f0fb3439a748636
 });
 
 export default DietLog;
