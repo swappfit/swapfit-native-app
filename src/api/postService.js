@@ -1,3 +1,4 @@
+// src/api/postService.js
 import apiClient from './apiClient';
 import { Platform } from 'react-native';
 

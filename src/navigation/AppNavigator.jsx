@@ -24,7 +24,6 @@ const SplashScreen = () => (
 
 const AppNavigator = () => {
   const { isAuthenticated, hasProfile, loading } = useAuth();
-
   if (loading) {
     return <SplashScreen />;
   }
