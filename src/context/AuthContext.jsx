@@ -15,9 +15,15 @@ export const useImageSelection = () => useContext(ImageSelectionContext);
 // Provider component
 export const ImageSelectionProvider = ({ children }) => {
   const [isImageSelectionInProgress, setIsImageSelectionInProgress] = useState(false);
+  const [pendingImage, setPendingImage] = useState(null);
   
   return (
-    <ImageSelectionContext.Provider value={{ isImageSelectionInProgress, setIsImageSelectionInProgress }}>
+    <ImageSelectionContext.Provider value={{ 
+      isImageSelectionInProgress, 
+      setIsImageSelectionInProgress,
+      pendingImage,
+      setPendingImage
+    }}>
       {children}
     </ImageSelectionContext.Provider>
   );

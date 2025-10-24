@@ -14,7 +14,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
-  Linking, // ✅ 1. IMPORT LINKING
+  Linking,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -23,6 +23,7 @@ import Events from './Events';
 import { fetchProducts } from '../../api/shopService';
 import { fetchCart, addToCart, removeFromCart, updateCartItem } from '../../api/cartService';
 import apiClient from '../../api/apiClient';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2;
 
@@ -200,34 +201,37 @@ const Store = () => {
     });
   };
 
-  // ✅ 2. NEW: The Checkout Handler
-  const handleCheckout = async () => {
-    try {
-      console.log('[STORE] Initiating checkout...');
-      Alert.alert('Processing', 'Creating your secure checkout page...');
+// src/pages/Store.jsx
 
-      // Call your new backend endpoint
-      const response = await apiClient.post('/cart/checkout');
-      const { checkoutUrl } = response.data.data;
+// ✅ 2. NEW: The Checkout Handler
+const handleCheckout = async () => {
+  try {
+    console.log('[STORE] Initiating checkout...');
+    Alert.alert('Processing', 'Creating your secure checkout page...');
 
-      if (checkoutUrl) {
-        console.log('[STORE] Opening checkout URL:', checkoutUrl);
-        // Use React Native's Linking API to open the URL in the device's browser
-        const supported = await Linking.canOpenURL(checkoutUrl);
-        if (supported) {
-          await Linking.openURL(checkoutUrl);
-        } else {
-          Alert.alert('Error', `Unable to open this URL: ${checkoutUrl}`);
-        }
+    // Call your new backend endpoint
+    const response = await apiClient.post('/cart/checkout');
+    const { checkoutUrl } = response.data.data;
+
+    if (checkoutUrl) {
+      console.log('[STORE] Opening checkout URL:', checkoutUrl);
+      // Use React Native's Linking API to open the URL in the device's browser
+      const supported = await Linking.canOpenURL(checkoutUrl);
+      if (supported) {
+        await Linking.openURL(checkoutUrl);
+        // Close the cart modal after opening the checkout
+        setIsCartVisible(false);
       } else {
-        throw new Error('Checkout URL not received from server.');
+        Alert.alert('Error', `Unable to open this URL: ${checkoutUrl}`);
       }
-    } catch (error) {
-      console.error('[STORE] Checkout failed:', error);
-      Alert.alert('Checkout Failed', 'Could not initiate checkout. Please try again.');
+    } else {
+      throw new Error('Checkout URL not received from server.');
     }
-  };
-
+  } catch (error) {
+    console.error('[STORE] Checkout failed:', error);
+    Alert.alert('Checkout Failed', 'Could not initiate checkout. Please try again.');
+  }
+};
   // --- RENDER FUNCTIONS ---
   const renderProductCard = ({ item: product }) => (
     <TouchableOpacity style={[styles.productCard, { width: CARD_WIDTH }]}>
@@ -553,7 +557,9 @@ const Store = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { 
+    flex: 1 
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -567,115 +573,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     marginRight: 20,
-  },
-  cartButton: {
-    position: 'relative',
-    padding: 5,
-  },
-  cartBadge: {
-    position: 'absolute',
-    right: -2,
-    top: -2,
-    backgroundColor: '#FFC107',
-    borderRadius: 9,
-    width: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#001f3f',
-  },
-  cartBadgeText: {
-    color: '#001f3f',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  cartModalContainer: {
-    backgroundColor: '#002b5c',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    height: '60%',
-  },
-  emptyCartContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  emptyCartText: {
-      fontSize: 16,
-      color: 'rgba(255,255,255,0.5)',
-      marginTop: 16,
-      fontWeight: '500',
-  },
-  cartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 193, 7, 0.2)',
-  },
-  cartItemImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    marginRight: 16,
-  },
-  cartItemDetails: {
-    flex: 1,
-  },
-  cartItemName: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  cartItemPrice: {
-    fontSize: 14,
-    color: '#FFC107',
-    marginTop: 4,
-  },
-  quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#002b5c',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 193, 7, 0.3)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 12,
-  },
-  quantityButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantityText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    marginHorizontal: 8,
-    minWidth: 20,
-    textAlign: 'center',
-  },
-  cartFooter: {
-      paddingTop: 20,
-      borderTopWidth: 1,
-      borderTopColor: 'rgba(255, 193, 7, 0.2)',
-      marginTop: 10,
-  },
-  cartTotalText: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: 'white',
-      textAlign: 'right',
-      marginBottom: 16,
-  },
-  checkoutButton: {
-      borderRadius: 16,
-      overflow: 'hidden',
   },
   tab: {
     flex: 1,
@@ -701,6 +598,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     zIndex: 1,
+  },
+  cartButton: {
+    position: 'relative',
+    padding: 5,
+  },
+  cartBadge: {
+    position: 'absolute',
+    right: -2,
+    top: -2,
+    backgroundColor: '#FFC107',
+    borderRadius: 9,
+    width: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#001f3f',
+  },
+  cartBadgeText: {
+    color: '#001f3f',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   tabContent: {
     flex: 1,
@@ -743,19 +662,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 20,
     width: '100%',
-  },
-  addToCartText: {
-    color: '#001f3f',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    width: '100%',
-  },
-  applyButtonText: {
-    color: '#001f3f',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
   },
   categoriesSection: {
     marginBottom: 24,
@@ -895,6 +801,13 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 8,
   },
+  addToCartText: {
+    color: '#001f3f',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    width: '100%',
+  },
   outOfStockButton: {
     backgroundColor: '#333',
     opacity: 0.7,
@@ -908,12 +821,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  filterModal: {
+  cartModalContainer: {
     backgroundColor: '#002b5c',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
-    maxHeight: '80%',
+    height: '60%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -925,6 +838,93 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
+  },
+  emptyCartContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  emptyCartText: {
+      fontSize: 16,
+      color: 'rgba(255,255,255,0.5)',
+      marginTop: 16,
+      fontWeight: '500',
+  },
+  cartItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 193, 7, 0.2)',
+  },
+  cartItemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 16,
+  },
+  cartItemDetails: {
+    flex: 1,
+  },
+  cartItemName: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  cartItemPrice: {
+    fontSize: 14,
+    color: '#FFC107',
+    marginTop: 4,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#002b5c',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 193, 7, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 12,
+  },
+  quantityButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginHorizontal: 8,
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  cartFooter: {
+      paddingTop: 20,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255, 193, 7, 0.2)',
+      marginTop: 10,
+  },
+  cartTotalText: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: 'white',
+      textAlign: 'right',
+      marginBottom: 16,
+  },
+  checkoutButton: {
+      borderRadius: 16,
+      overflow: 'hidden',
+  },
+  filterModal: {
+    backgroundColor: '#002b5c',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
   },
   filterSection: {
     marginBottom: 24,
@@ -960,6 +960,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginTop: 16,
+  },
+  applyButtonText: {
+    color: '#001f3f',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   errorText: {
     color: '#FFa000',

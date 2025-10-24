@@ -128,6 +128,31 @@ export const discoverGyms = async (params) => {
   }
 };
 
+// src/services/gymService.js (add this function)
+export const getGymsByPlanIds = async (planIds) => {
+  if (!planIds || planIds.length === 0) {
+    return [];
+  }
+
+  const gymPlans = await prisma.gymPlan.findMany({
+    where: {
+      id: { in: planIds }
+    },
+    include: {
+      gym: true
+    }
+  });
+
+  // Extract unique gyms from the plans
+  const uniqueGyms = gymPlans.reduce((acc, plan) => {
+    if (plan.gym && !acc.find(gym => gym.id === plan.gym.id)) {
+      acc.push(plan.gym);
+    }
+    return acc;
+  }, []);
+
+  return uniqueGyms;
+};
 /**
  * @description Fetches the details of a single gym by its ID.
  * @param {string} gymId - The ID of the gym.

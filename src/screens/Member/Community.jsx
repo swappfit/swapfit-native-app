@@ -16,8 +16,12 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
+  Platform,
+  PermissionsAndroid,
+  Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+// Import only the specific function we need from ImagePicker
 import { launchImageLibrary } from 'react-native-image-picker';
 import { postService } from '../../api/postService';
 import { API_BASE_URL } from '../../api/apiClient';
@@ -27,7 +31,13 @@ import { useImageSelection } from '../../context/AuthContext';
 const { width: screenWidth } = Dimensions.get('window');
 
 const Community = () => {
-  const { isImageSelectionInProgress, setIsImageSelectionInProgress } = useImageSelection();
+  const { 
+    isImageSelectionInProgress, 
+    setIsImageSelectionInProgress,
+    pendingImage,
+    setPendingImage
+  } = useImageSelection();
+  
   const [activeTab, setActiveTab] = useState('posts');
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,25 +57,16 @@ const Community = () => {
     console.log('Community component mounted');
     isMounted.current = true;
     
+    // Check if there's a pending image from a previous selection
+    if (pendingImage) {
+      console.log('Found pending image from previous selection');
+      setNewPostImage(pendingImage);
+      setPendingImage(null);
+    }
+    
     // Add app state listener
     appStateSubscription.current = AppState.addEventListener('change', nextAppState => {
       console.log('AppState changed to', nextAppState);
-      
-      // If we're returning from background and we were in the middle of image selection,
-      // we need to prevent any navigation or authentication refresh
-      if (appState.current.match(/background/) && nextAppState === 'active' && isImageSelectionInProgress) {
-        console.log('Returning from image selection, preventing unwanted navigation');
-        // Set a flag to prevent auth refresh or navigation
-        setIsImageSelectionInProgress(false);
-        
-        // Force the modal to stay open
-        setTimeout(() => {
-          if (isMounted.current) {
-            setPostModalVisible(true);
-          }
-        }, 300);
-      }
-      
       appState.current = nextAppState;
     });
     
@@ -76,7 +77,7 @@ const Community = () => {
         appStateSubscription.current.remove();
       }
     };
-  }, [isImageSelectionInProgress]);
+  }, [pendingImage, setPendingImage]);
 
   const fetchPosts = useCallback(async () => {
     // Don't fetch if we're in the middle of image selection
@@ -191,11 +192,93 @@ const Community = () => {
     }
   };
 
-  // ✅ --- FIXED IMAGE SELECTION FUNCTION --- ✅
-  const handleSelectImage = async () => {
+  // Check if a specific permission is granted
+  const checkPermission = async (permission) => {
+    try {
+      const result = await PermissionsAndroid.check(permission);
+      console.log(`Permission ${permission}: ${result}`);
+      return result;
+    } catch (error) {
+      console.error(`Error checking permission ${permission}:`, error);
+      return false;
+    }
+  };
+
+  // Request camera and storage permissions for Android
+  const requestPermissions = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        console.log('Android version:', Platform.Version);
+        
+        // Define permissions based on Android version
+        let permissionsToRequest = [];
+        
+        if (Platform.Version >= 33) {
+          // Android 13+ (API 33+)
+          permissionsToRequest = [
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+          ];
+        } else if (Platform.Version >= 29) {
+          // Android 10-12
+          permissionsToRequest = [
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          ];
+        } else {
+          // Android 9 and below
+          permissionsToRequest = [
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+            PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          ];
+        }
+        
+        console.log('Permissions to request:', permissionsToRequest);
+        
+        // Request permissions
+        const granted = await PermissionsAndroid.requestMultiple(permissionsToRequest);
+        console.log('Permission results:', granted);
+        
+        // Check if all required permissions are granted
+        const allGranted = permissionsToRequest.every(permission => 
+          granted[permission] === PermissionsAndroid.RESULTS.GRANTED
+        );
+        
+        if (allGranted) {
+          console.log('All permissions granted');
+          return true;
+        } else {
+          console.log('Some permissions were denied');
+          
+          // Show which permissions were denied
+          const deniedPermissions = permissionsToRequest.filter(permission => 
+            granted[permission] !== PermissionsAndroid.RESULTS.GRANTED
+          );
+          console.log('Denied permissions:', deniedPermissions);
+          
+          Alert.alert(
+            'Permission Required', 
+            'Please grant camera and storage permissions to select images. You can enable them in your device settings.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Settings', onPress: () => Linking.openSettings() }
+            ]
+          );
+          return false;
+        }
+      } catch (err) {
+        console.error('Permission request error:', err);
+        Alert.alert('Error', 'Failed to request permissions. Please try again.');
+        return false;
+      }
+    }
+    return true; // iOS doesn't need explicit permission for image library
+  };
+
+  // Simplified image selection function
+  const handleSelectImage = useCallback(async () => {
     console.log('=== START IMAGE SELECTION ===');
-    console.log('Component mounted:', isMounted.current);
-    console.log('Modal visible:', isPostModalVisible);
     
     // Check if component is still mounted
     if (!isMounted.current) {
@@ -203,7 +286,20 @@ const Community = () => {
       return;
     }
     
-    // Set context flag to indicate we're starting image selection
+    // Check if we're already selecting an image
+    if (isImageSelectionInProgress) {
+      console.log('Image selection already in progress');
+      return;
+    }
+    
+    // Request permissions first
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) {
+      console.log('Permission not granted, aborting image selection');
+      return;
+    }
+    
+    // Set flag to indicate we're starting image selection
     setIsImageSelectionInProgress(true);
     
     const options = {
@@ -211,80 +307,84 @@ const Community = () => {
       quality: 0.8,
       maxWidth: 1024,
       maxHeight: 1024,
+      includeBase64: false,
+      includeExtra: true,
     };
 
     try {
       console.log('Launching image library...');
-      const result = await launchImageLibrary(options);
-      console.log('Image library result received');
-
-      // Check if component is still mounted after async operation
-      if (!isMounted.current) {
-        console.error('Component was unmounted during image selection');
-        return;
-      }
-
-      if (result.didCancel) {
-        console.log('User cancelled image picker');
-        setIsImageSelectionInProgress(false);
-        return;
-      }
       
-      if (result.errorCode) {
-        console.error('ImagePicker Error: ', result.errorMessage);
+      // Launch the image library with a callback
+      launchImageLibrary(options, (response) => {
+        console.log('Image picker callback received');
+        console.log('Callback response:', JSON.stringify(response, null, 2));
+        
+        // Reset the flag after processing
         setIsImageSelectionInProgress(false);
-        Alert.alert('Image Error', result.errorMessage);
-        return;
-      }
-
-      if (result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        console.log('Selected image asset:', asset);
         
-        console.log('Setting new post image...');
-        const newImage = {
-          uri: asset.uri,
-          type: asset.type,
-          fileName: asset.fileName,
-        };
-        
-        // Check if modal is still visible before updating state
-        if (!isPostModalVisible) {
-          console.error('Modal is no longer visible, forcing it to reopen');
-          // Force the modal to reopen
-          setPostModalVisible(true);
-          setTimeout(() => {
-            if (isMounted.current) {
-              setNewPostImage(newImage);
-            }
-          }, 300);
-          setIsImageSelectionInProgress(false);
+        // Defensive check: ensure response is an object
+        if (!response) {
+          console.error('Image picker callback received null/undefined response');
           return;
         }
         
-        // Update state and verify
-        setNewPostImage(newImage);
-        console.log('New post image set successfully');
+        // Check if component is still mounted
+        if (!isMounted.current) {
+          console.error('Component was unmounted before callback, saving image to context');
+          
+          // If the component was unmounted, save the selected image to context
+          if (response.assets && Array.isArray(response.assets) && response.assets.length > 0) {
+            const asset = response.assets[0];
+            const newImage = {
+              uri: asset.uri,
+              type: asset.type || 'image/jpeg',
+              fileName: asset.fileName || `photo_${Date.now()}.jpg`,
+            };
+            setPendingImage(newImage);
+          }
+          return;
+        }
+
+        if (response.didCancel) {
+          console.log('User cancelled image picker');
+          return;
+        }
         
-        // Verify state was updated after a short delay
-        setTimeout(() => {
-          console.log('Verification - newPostImage after setState:', newPostImage);
-        }, 100);
-      } else {
-        console.error('No assets found in image picker result');
-      }
+        if (response.errorCode) {
+          console.error('ImagePicker Error: ', response.errorMessage);
+          Alert.alert('Image Error', response.errorMessage || 'An unknown error occurred');
+          return;
+        }
+
+        if (response.assets && Array.isArray(response.assets) && response.assets.length > 0) {
+          const asset = response.assets[0];
+          console.log('Selected image asset:', asset);
+          
+          console.log('Setting new post image...');
+          const newImage = {
+            uri: asset.uri,
+            type: asset.type || 'image/jpeg',
+            fileName: asset.fileName || `photo_${Date.now()}.jpg`,
+          };
+          
+          // Update state
+          setNewPostImage(newImage);
+          console.log('New post image set successfully');
+        } else {
+          console.error('No assets found in image picker result');
+        }
+        
+        console.log('=== END IMAGE SELECTION ===');
+      });
+      
     } catch (error) {
       console.error('An error occurred in launchImageLibrary: ', error);
-      Alert.alert('Error', 'An unexpected error occurred while selecting the image.');
-    } finally {
-      // Reset the flag after a short delay to ensure app state change is processed
-      setTimeout(() => {
-        setIsImageSelectionInProgress(false);
-        console.log('Image selection process completed');
-      }, 500);
-      console.log('=== END IMAGE SELECTION ===');
+      if (isMounted.current) {
+        Alert.alert('Error', 'An unexpected error occurred while selecting the image.');
+      }
+      setIsImageSelectionInProgress(false);
     }
-  };
+  }, [isMounted, isImageSelectionInProgress, requestPermissions, setIsImageSelectionInProgress, setPendingImage]);
 
   const handleAddPost = async () => {
     console.log('Adding new post...');
@@ -417,12 +517,6 @@ const Community = () => {
         onRequestClose={() => {
           console.log('Modal close requested');
           setPostModalVisible(false);
-        }}
-        onShow={() => {
-          console.log('Modal shown');
-        }}
-        onDismiss={() => {
-          console.log('Modal dismissed');
         }}
       >
         <View style={styles.modalContainer}>
@@ -591,4 +685,5 @@ const styles = StyleSheet.create({
   disabledButton: { opacity: 0.5 },
   modalButtonText: { color: '#001f3f', fontWeight: 'bold', fontSize: 16 },
 });
+
 export default Community;
