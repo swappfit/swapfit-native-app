@@ -114,6 +114,7 @@ const Profile = () => {
       const profileResult = await apiClient.get('/users/profile');
       if (profileResult.data.success) {
         setUserProfile(profileResult.data.data);
+        console.log('[Profile] Profile data fetched:', profileResult.data.data);
       } else {
         throw new Error('Failed to load profile.');
       }
@@ -141,12 +142,27 @@ const Profile = () => {
   const fetchSubscribedTrainers = async () => {
     setTrainersLoading(true);
     try {
-      if (!userProfile?.subscriptions || userProfile.subscriptions.length === 0) { setSubscribedTrainers([]); return; }
+      if (!userProfile?.subscriptions || userProfile.subscriptions.length === 0) { 
+        setSubscribedTrainers([]); 
+        return; 
+      }
+      
       const trainerPlanIds = userProfile.subscriptions.filter(sub => sub.trainerPlanId).map(sub => sub.trainerPlanId);
-      if (trainerPlanIds.length === 0) { setSubscribedTrainers([]); return; }
+      console.log('[Profile] Trainer plan IDs:', trainerPlanIds);
+      
+      if (trainerPlanIds.length === 0) { 
+        setSubscribedTrainers([]); 
+        return; 
+      }
+      
       const trainersResponse = await apiClient.post('/trainers/by-plan-ids', { planIds: trainerPlanIds });
-      if (trainersResponse.data.success) { setSubscribedTrainers(trainersResponse.data.data); }
-      else { throw new Error('Failed to load trainers.'); }
+      if (trainersResponse.data.success) { 
+        setSubscribedTrainers(trainersResponse.data.data);
+        console.log('[Profile] Subscribed trainers fetched:', trainersResponse.data.data);
+      }
+      else { 
+        throw new Error('Failed to load trainers.'); 
+      }
     } catch (err) {
       console.warn('Trainers fetch failed:', err);
       Alert.alert('Error', 'Failed to load your trainers. Please try again.');
@@ -512,20 +528,25 @@ const Profile = () => {
             <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>{safeUserProfile.role === 'TRAINER' ? "Clients will appear here when they subscribe to your plans" : "Subscribe to trainers to see them here"}</Text>
           </View>
         ) : (
-          <FlatList data={subscribedTrainers} keyExtractor={(item) => item.id} renderItem={({ item }) => (
-            <View style={[styles.trainerCard, { backgroundColor: colors.surface }]}>
-              <Image source={{ uri: item.gallery?.[0] || 'https://via.placeholder.com/150' }} style={styles.trainerAvatar} />
-              <View style={styles.trainerInfo}>
-                <Text style={[styles.trainerName, { color: colors.text }]}>{item.user?.name || 'Trainer'}</Text>
-                <Text style={[styles.trainerExperience, { color: colors.textSecondary }]}>{item.experience || 0} years of experience</Text>
-                <Text style={[styles.trainerBio, { color: colors.textSecondary }]} numberOfLines={2}>{item.bio}</Text>
+          <FlatList 
+            data={subscribedTrainers} 
+            keyExtractor={(item) => item.id} 
+            renderItem={({ item }) => (
+              <View style={[styles.trainerCard, { backgroundColor: colors.surface }]}>
+                <Image source={{ uri: item.gallery?.[0] || 'https://via.placeholder.com/150' }} style={styles.trainerAvatar} />
+                <View style={styles.trainerInfo}>
+                  <Text style={[styles.trainerName, { color: colors.text }]}>{item.user?.memberProfile?.name || item.user?.email?.split('@')[0] || 'Trainer'}</Text>
+                  <Text style={[styles.trainerExperience, { color: colors.textSecondary }]}>{item.experience || 0} years of experience</Text>
+                  <Text style={[styles.trainerBio, { color: colors.textSecondary }]} numberOfLines={2}>{item.bio}</Text>
+                </View>
+                <View style={styles.trainerActions}>
+                  <TouchableOpacity style={[styles.trainerActionButton, { backgroundColor: colors.primary }]} onPress={() => handleViewTrainerDetails(item)}><Icon name="info" size={16} color={colors.primaryText} /></TouchableOpacity>
+                  <TouchableOpacity style={[styles.trainerActionButton, { backgroundColor: colors.primary, marginTop: 8 }]} onPress={() => handleChatWithTrainer(item)}><Icon name="chat" size={16} color={colors.primaryText} /></TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.trainerActions}>
-                <TouchableOpacity style={[styles.trainerActionButton, { backgroundColor: colors.primary }]} onPress={() => handleViewTrainerDetails(item)}><Icon name="info" size={16} color={colors.primaryText} /></TouchableOpacity>
-                <TouchableOpacity style={[styles.trainerActionButton, { backgroundColor: colors.primary, marginTop: 8 }]} onPress={() => handleChatWithTrainer(item)}><Icon name="chat" size={16} color={colors.primaryText} /></TouchableOpacity>
-              </View>
-            </View>
-          )} showsVerticalScrollIndicator={false} />
+            )} 
+            showsVerticalScrollIndicator={false} 
+          />
         )}
       </View>
     </View>
