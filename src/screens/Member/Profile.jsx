@@ -12,12 +12,15 @@ import {
   Alert,
   Linking,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../api/apiClient';
 import * as subscriptionService from '../../api/subscriptionService';
+
+const { width } = Dimensions.get('window');
 
 const colors = {
   background: '#001f3f',
@@ -29,6 +32,9 @@ const colors = {
   border: 'rgba(255, 193, 7, 0.3)',
   error: '#ff5252',
   success: '#4caf50',
+  silver: '#C0C0C0',
+  gold: '#FFD700',
+  platinum: '#E5E4E2',
 };
 
 const boyAvatar = require('../../assets/image/boy.jpg');
@@ -47,6 +53,11 @@ const Profile = () => {
   const [gymsLoading, setGymsLoading] = useState(false);
   const [checkIns, setCheckIns] = useState([]);
   const [checkInsLoading, setCheckInsLoading] = useState(false);
+  const [multiGymTiers, setMultiGymTiers] = useState([]);
+  const [multiGymLoading, setMultiGymLoading] = useState(false);
+  const [multiGymSubscription, setMultiGymSubscription] = useState(null);
+  const [accessibleGyms, setAccessibleGyms] = useState([]);
+  const [purchasingTier, setPurchasingTier] = useState(null);
   const navigation = useNavigation();
   const { logout } = useAuth();
   const [userProfile, setUserProfile] = useState(null);
@@ -56,10 +67,71 @@ const Profile = () => {
     { id: 'profile', title: 'Profile', icon: 'person' },
     { id: 'gyms', title: 'My Gyms', icon: 'business' },
     { id: 'trainers', title: 'My Trainers', icon: 'fitness-center' },
+    { id: 'multi-gym', title: 'Multi-Gym', icon: 'location-city' },
     { id: 'notifications', title: 'Notifications', icon: 'notifications' },
   ];
 
-  // ✅ UPDATED: More robust date formatting function
+  // Predefined multi-gym tiers with enhanced features
+  const predefinedTiers = [
+    {
+      id: 'silver',
+      name: 'Silver',
+      price: 49.99,
+      badge: '🥈',
+      color: colors.silver,
+      gradient: ['#C0C0C0', '#808080'],
+      description: 'Perfect for fitness enthusiasts',
+      features: [
+        'Access to 50+ Silver tier gyms',
+        'Basic amenities access',
+        'Monthly fitness assessment',
+        'Group classes access',
+        'Mobile app access',
+      ],
+      popular: false,
+    },
+    {
+      id: 'gold',
+      name: 'Gold',
+      price: 79.99,
+      badge: '🥇',
+      color: colors.gold,
+      gradient: ['#FFD700', '#FFA500'],
+      description: 'Most popular choice',
+      features: [
+        'Access to 100+ Gold tier gyms',
+        'Premium amenities access',
+        'Weekly fitness assessment',
+        'Unlimited group classes',
+        '1 personal training session/month',
+        'Nutrition guidance',
+        'Guest passes (2/month)',
+      ],
+      popular: true,
+    },
+    {
+      id: 'platinum',
+      name: 'Platinum',
+      price: 119.99,
+      badge: '💎',
+      color: colors.platinum,
+      gradient: ['#E5E4E2', '#BCC6CC'],
+      description: 'Ultimate fitness experience',
+      features: [
+        'Access to ALL gyms (200+)',
+        'VIP amenities access',
+        'Weekly fitness assessment',
+        'Unlimited group classes',
+        '2 personal training sessions/month',
+        'Personalized nutrition plan',
+        'Guest passes (5/month)',
+        'Spa & wellness access',
+        'Priority booking',
+      ],
+      popular: false,
+    },
+  ];
+
   const formatLocalTime = (dateValue, label = "Timestamp") => {
     if (!dateValue) {
       console.log(`[formatLocalTime] ${label}: Input is null or undefined.`);
@@ -67,24 +139,19 @@ const Profile = () => {
     }
     
     try {
-      // Handle different types of date inputs
       let date;
       if (typeof dateValue === 'string') {
-        // Check if it's already in ISO format
         if (dateValue.includes('T') && dateValue.includes('Z')) {
           date = new Date(dateValue);
         } else {
-          // Try to parse as ISO if it doesn't look like ISO
           date = new Date(dateValue);
         }
       } else if (dateValue instanceof Date) {
         date = dateValue;
       } else {
-        // Try to convert to Date if it's a number or other type
         date = new Date(dateValue);
       }
       
-      // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.error(`[formatLocalTime] ${label}: Invalid date object:`, dateValue);
         return 'Invalid Date';
@@ -111,10 +178,25 @@ const Profile = () => {
     setLoading(true);
     setError(null);
     try {
-      const profileResult = await apiClient.get('/users/profile');
-      if (profileResult.data.success) {
-        setUserProfile(profileResult.data.data);
-        console.log('[Profile] Profile data fetched:', profileResult.data.data);
+      const profileResult = await subscriptionService.getUserProfile();
+      if (profileResult.success) {
+        setUserProfile(profileResult.data);
+        console.log('[Profile] Profile data fetched:', profileResult.data);
+        
+        // Check for multi-gym subscription in the profile data
+        const activeMultiGymSub = profileResult.data.subscriptions?.find(
+          sub => sub.multiGymTier && sub.status === 'active'
+        );
+        
+        if (activeMultiGymSub) {
+          console.log('[Profile] Found active multi-gym subscription:', activeMultiGymSub);
+          setMultiGymSubscription(activeMultiGymSub);
+          setAccessibleGyms(profileResult.data.accessibleGyms || []);
+        } else {
+          console.log('[Profile] No active multi-gym subscription found');
+          setMultiGymSubscription(null);
+          setAccessibleGyms([]);
+        }
       } else {
         throw new Error('Failed to load profile.');
       }
@@ -192,24 +274,18 @@ const Profile = () => {
     setCheckInsLoading(true);
     try {
       console.log('[Profile] Fetching ALL check-ins...');
-      const response = await apiClient.get('/users/check-ins');
-      if (response.data.success) {
-        // Process the check-ins to ensure dates are properly handled
-        const processedCheckIns = response.data.data.map(checkIn => {
-          // Convert string dates to Date objects if they aren't already
+      const response = await subscriptionService.getUserCheckIns();
+      if (response.success) {
+        const processedCheckIns = response.data.map(checkIn => {
           const processedCheckIn = { ...checkIn };
-          
           if (checkIn.checkIn && typeof checkIn.checkIn === 'string') {
             processedCheckIn.checkIn = new Date(checkIn.checkIn);
           }
-          
           if (checkIn.checkOut && typeof checkIn.checkOut === 'string') {
             processedCheckIn.checkOut = new Date(checkIn.checkOut);
           }
-          
           return processedCheckIn;
         });
-        
         setCheckIns(processedCheckIns);
         console.log('[Profile] Fetched check-ins successfully:', processedCheckIns);
       }
@@ -217,6 +293,38 @@ const Profile = () => {
       console.warn('[Profile] Failed to fetch check-ins:', err);
     } finally {
       setCheckInsLoading(false);
+    }
+  };
+
+  const fetchMultiGymData = async () => {
+    setMultiGymLoading(true);
+    try {
+      setMultiGymTiers(predefinedTiers);
+      
+      // If we already have the profile data with subscription info, use it
+      if (userProfile) {
+        const activeMultiGymSub = userProfile.subscriptions?.find(
+          sub => sub.multiGymTier && sub.status === 'active'
+        );
+        
+        if (activeMultiGymSub) {
+          console.log('[Profile] Found active multi-gym subscription in existing profile data:', activeMultiGymSub);
+          setMultiGymSubscription(activeMultiGymSub);
+          setAccessibleGyms(userProfile.accessibleGyms || []);
+        } else {
+          console.log('[Profile] No active multi-gym subscription found in existing profile data');
+          setMultiGymSubscription(null);
+          setAccessibleGyms([]);
+        }
+      } else {
+        // Otherwise fetch fresh profile data
+        await fetchProfileData();
+      }
+    } catch (err) {
+      console.error('[Profile] Failed to fetch multi-gym data:', err);
+      Alert.alert('Error', 'Failed to load multi-gym plans. Please try again.');
+    } finally {
+      setMultiGymLoading(false);
     }
   };
 
@@ -264,6 +372,25 @@ const Profile = () => {
     }
   };
 
+  const handlePurchaseTier = async (tierId) => {
+    setPurchasingTier(tierId);
+    try {
+      console.log(`[Profile] Purchasing multi-gym tier: ${tierId}`);
+      const response = await subscriptionService.createCheckoutSession(tierId, 'MULTI_GYM');
+      if (response.success && response.data.checkoutUrl) {
+        await Linking.openURL(response.data.checkoutUrl);
+        setRefreshKey(prev => prev + 1);
+      } else {
+        Alert.alert("Error", response.message || "Failed to open payment page.");
+      }
+    } catch (error) {
+      console.error('[Profile] Failed to purchase tier:', error);
+      Alert.alert("Error", error.response?.data?.message || "Failed to purchase tier.");
+    } finally {
+      setPurchasingTier(null);
+    }
+  };
+
   const handleViewGymDetails = (gym) => {
     navigation.navigate('GymDetails', { gymId: gym.id });
   };
@@ -271,13 +398,12 @@ const Profile = () => {
   const handleCheckInToGym = async (gym) => {
     try {
       console.log(`[Profile] Attempting to check in to gym: ${gym.name} (ID: ${gym.id})`);
-      const response = await apiClient.post('/gyms/check-in', { gymId: gym.id });
-      if (response.data.success) {
+      const response = await subscriptionService.checkInToGym(gym.id);
+      if (response.success) {
         Alert.alert("Check-in Successful!", `Welcome to ${gym.name}.`);
-        // Force a refresh of the check-ins data to show the new check-in
         fetchActiveCheckIns();
       } else {
-        throw new Error(response.data.message);
+        throw new Error(response.message);
       }
     } catch (error) {
       console.error('[Profile] Check-in failed:', error);
@@ -287,13 +413,12 @@ const Profile = () => {
 
   const handleCheckOutFromGym = async (checkInId) => {
     try {
-      const response = await apiClient.patch(`/gyms/check-out/${checkInId}`);
-      if (response.data.success) {
+      const response = await subscriptionService.checkOutFromGym(checkInId);
+      if (response.success) {
         Alert.alert("Check-out Successful!", "You have successfully checked out.");
-        // Force a refresh of the check-ins data to show the updated checkout time
         fetchActiveCheckIns();
       } else {
-        throw new Error(response.data.message);
+        throw new Error(response.message);
       }
     } catch (error) {
       console.error('[Profile] Check-out failed:', error);
@@ -341,6 +466,8 @@ const Profile = () => {
     } else if (activeTab === 'gyms' && userProfile) {
       fetchSubscribedGyms();
       fetchActiveCheckIns();
+    } else if (activeTab === 'multi-gym') {
+      fetchMultiGymData();
     }
   }, [activeTab, userProfile, refreshKey]);
 
@@ -475,9 +602,7 @@ const Profile = () => {
             data={checkIns}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => {
-              // ✅ DEBUGGING LOG: Log the raw item data before rendering
               console.log(`[Profile] Rendering CheckIn Item: ID=${item.id}, CheckIn=${item.checkIn}, CheckOut=${item.checkOut}`);
-
               return (
                 <View style={[styles.checkInHistoryCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.checkInHistoryInfo}>
@@ -487,7 +612,6 @@ const Profile = () => {
                     </Text>
                     {item.checkOut ? (
                       <Text style={[styles.checkInHistoryTime, { color: colors.success }]}>
-                        {/* ✅ DEBUGGING LOG: We are now logging the check-out time specifically */}
                         Check-out: {formatLocalTime(item.checkOut, "History CheckOut Time")}
                       </Text>
                     ) : (
@@ -552,6 +676,196 @@ const Profile = () => {
     </View>
   );
 
+  const renderMultiGymTab = () => (
+    <View style={styles.tabContent}>
+      {/* Header Section */}
+      <View style={styles.multiGymHeader}>
+        <View style={styles.headerContent}>
+          <Icon name="location-city" size={32} color={colors.primary} />
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Multi-Gym Membership</Text>
+            <Text style={styles.headerSubtitle}>Access multiple gyms with one membership</Text>
+          </View>
+        </View>
+      </View>
+
+      {multiGymSubscription ? (
+        /* Active Subscription View */
+        <View style={styles.activeSubscriptionContainer}>
+          <View style={styles.activeSubscriptionCard}>
+            <View style={styles.subscriptionHeader}>
+              <View style={styles.tierBadge}>
+                <Text style={styles.tierBadgeText}>
+                  {multiGymSubscription.multiGymTier.name === 'Silver' ? '🥈' : 
+                   multiGymSubscription.multiGymTier.name === 'Gold' ? '🥇' : '💎'}
+                </Text>
+              </View>
+              <View style={styles.subscriptionInfo}>
+                <Text style={styles.subscriptionTitle}>
+                  {multiGymSubscription.multiGymTier.name} Membership
+                </Text>
+                <Text style={styles.subscriptionStatus}>Active</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.manageButton}
+                onPress={handleManageBilling}
+                disabled={isBillingLoading}
+              >
+                {isBillingLoading ? (
+                  <ActivityIndicator size="small" color={colors.primaryText} />
+                ) : (
+                  <Icon name="settings" size={20} color={colors.primaryText} />
+                )}
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.subscriptionDetails}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Monthly Price</Text>
+                <Text style={styles.detailValue}>
+                  ${multiGymTiers.find(t => t.id === multiGymSubscription.multiGymTier.id)?.price || 0}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Accessible Gyms</Text>
+                <Text style={styles.detailValue}>{accessibleGyms.length} Gyms</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Next Billing</Text>
+                <Text style={styles.detailValue}>
+                  {formatLocalTime(multiGymSubscription.endDate, "Next Billing")}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Accessible Gyms */}
+          <View style={styles.accessibleGymsSection}>
+            <Text style={styles.sectionTitle}>Your Accessible Gyms</Text>
+            {accessibleGyms.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon name="business" size={48} color={colors.textSecondary} />
+                <Text style={styles.emptyText}>No gyms available</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={accessibleGyms}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <View style={styles.gymCard}>
+                    <Image source={{ uri: item.photos?.[0] || 'https://via.placeholder.com/150' }} style={styles.gymImage} />
+                    <View style={styles.gymInfo}>
+                      <Text style={styles.gymName}>{item.name}</Text>
+                      <Text style={styles.gymAddress}>{item.address}</Text>
+                    </View>
+                  </View>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      ) : (
+        /* No Active Subscription - Show Plans */
+        <View style={styles.plansContainer}>
+          <View style={styles.plansHeader}>
+            <Text style={styles.plansTitle}>Choose Your Plan</Text>
+            <Text style={styles.plansSubtitle}>Select the perfect membership for your fitness journey</Text>
+          </View>
+
+          {multiGymLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tiersScrollView}>
+              {multiGymTiers.map((tier) => (
+                <View key={tier.id} style={[
+                  styles.tierCard,
+                  tier.popular && styles.popularTierCard,
+                  { backgroundColor: colors.surface }
+                ]}>
+                  {tier.popular && (
+                    <View style={styles.popularBadge}>
+                      <Text style={styles.popularBadgeText}>MOST POPULAR</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.tierHeader}>
+                    <View style={[styles.tierIcon, { backgroundColor: tier.color }]}>
+                      <Text style={styles.tierIconText}>{tier.badge}</Text>
+                    </View>
+                    <Text style={styles.tierName}>{tier.name}</Text>
+                    <Text style={styles.tierDescription}>{tier.description}</Text>
+                  </View>
+
+                  <View style={styles.tierPricing}>
+                    <Text style={styles.tierPrice}>${tier.price}</Text>
+                    <Text style={styles.tierPricePeriod}>per month</Text>
+                  </View>
+
+                  <View style={styles.tierFeatures}>
+                    {tier.features.map((feature, index) => (
+                      <View key={index} style={styles.featureItem}>
+                        <Icon name="check-circle" size={16} color={colors.success} />
+                        <Text style={styles.featureText}>{feature}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity 
+                    style={[
+                      styles.subscribeButton,
+                      { backgroundColor: tier.color },
+                      purchasingTier === tier.id && styles.disabledButton
+                    ]}
+                    onPress={() => handlePurchaseTier(tier.id)}
+                    disabled={purchasingTier === tier.id}
+                  >
+                    {purchasingTier === tier.id ? (
+                      <ActivityIndicator size="small" color={colors.primaryText} />
+                    ) : (
+                      <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Benefits Section */}
+          <View style={styles.benefitsSection}>
+            <Text style={styles.benefitsTitle}>Why Choose Multi-Gym?</Text>
+            <View style={styles.benefitsList}>
+              <View style={styles.benefitItem}>
+                <Icon name="location-on" size={24} color={colors.primary} />
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Access Anywhere</Text>
+                  <Text style={styles.benefitDescription}>Work out at any partner gym nationwide</Text>
+                </View>
+              </View>
+              <View style={styles.benefitItem}>
+                <Icon name="savings" size={24} color={colors.primary} />
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>Save Money</Text>
+                  <Text style={styles.benefitDescription}>Get better value than individual gym memberships</Text>
+                </View>
+              </View>
+              <View style={styles.benefitItem}>
+                <Icon name="fitness-center" size={24} color={colors.primary} />
+                <View style={styles.benefitContent}>
+                  <Text style={styles.benefitTitle}>More Variety</Text>
+                  <Text style={styles.benefitDescription}>Try different equipment and classes</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
   const renderNotificationsTab = () => (
     <View style={styles.tabContent}>
       <View style={[styles.detailsCard, { backgroundColor: colors.surface }]}>
@@ -594,6 +908,7 @@ const Profile = () => {
         {activeTab === 'profile' && renderProfileTab()}
         {activeTab === 'gyms' && renderGymsTab()}
         {activeTab === 'trainers' && renderTrainersTab()}
+        {activeTab === 'multi-gym' && renderMultiGymTab()}
         {activeTab === 'notifications' && renderNotificationsTab()}
       </ScrollView>
     </View>
@@ -607,65 +922,129 @@ const styles = StyleSheet.create({
   activeTab: { borderBottomColor: colors.primary },
   content: { flex: 1, paddingHorizontal: 15 },
   tabContent: { paddingTop: 20, paddingBottom: 40 },
+  
+  // Profile Styles
   profileHeader: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
   profileAvatar: { width: 80, height: 80, borderRadius: 40, marginRight: 15, borderWidth: 2, borderColor: colors.primary },
   profileInfo: { flex: 1 },
-  profileName: { fontSize: 22, fontWeight: 'bold', marginBottom: 5 },
-  profileSince: { fontSize: 12 },
+  profileName: { fontSize: 22, fontWeight: 'bold', marginBottom: 5, color: colors.text },
+  profileSince: { fontSize: 12, color: colors.textSecondary },
   editButton: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 },
   detailsCard: { borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
-  detailsTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15 },
+  detailsTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: colors.text },
   detailItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
-  detailLabel: { fontSize: 16 },
-  detailValue: { fontSize: 16, fontWeight: '500' },
+  detailLabel: { fontSize: 16, color: colors.textSecondary },
+  detailValue: { fontSize: 16, fontWeight: '500', color: colors.text },
   actionsCard: { borderRadius: 16, paddingHorizontal: 5, paddingVertical: 10, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
-  actionsTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, paddingHorizontal: 15 },
+  actionsTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, paddingHorizontal: 15, color: colors.text },
   actionButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, paddingHorizontal: 15 },
   actionIcon: { marginRight: 20 },
-  actionText: { fontSize: 16, fontWeight: '500' },
+  actionText: { fontSize: 16, fontWeight: '500', color: colors.text },
   logoutButton: {},
-  notificationsContainer: { gap: 10 },
-  notificationCard: { flexDirection: 'row', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  unreadNotification: { backgroundColor: 'rgba(255, 193, 7, 0.1)' },
-  notificationContent: { flex: 1 },
-  notificationTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  notificationMessage: { fontSize: 14, marginBottom: 6 },
-  notificationTime: { fontSize: 12 },
-  markAsReadButton: { padding: 8, marginLeft: 10 },
-  deleteButton: { padding: 8, marginLeft: 5 },
   emptyState: { borderRadius: 16, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginTop: 20 },
-  emptyText: { fontSize: 18, fontWeight: '600', marginBottom: 8, marginTop: 10 },
-  emptySubtext: { fontSize: 14, textAlign: 'center' },
+  emptyText: { fontSize: 18, fontWeight: '600', marginBottom: 8, marginTop: 10, color: colors.text },
+  emptySubtext: { fontSize: 14, textAlign: 'center', color: colors.textSecondary },
   exploreButton: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 25, marginTop: 20 },
-  exploreButtonText: { fontSize: 16, fontWeight: 'bold' },
+  exploreButtonText: { fontSize: 16, fontWeight: 'bold', color: colors.primaryText },
   retryButton: { backgroundColor: colors.primary, paddingVertical: 12, paddingHorizontal: 30, borderRadius: 25, alignItems: 'center', marginTop: 20 },
   retryButtonText: { color: colors.primaryText, fontSize: 16, fontWeight: 'bold' },
   loadingContainer: { padding: 20, alignItems: 'center' },
   gymCard: { flexDirection: 'row', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: colors.border, marginBottom: 15, alignItems: 'center' },
   gymImage: { width: 80, height: 80, borderRadius: 10, marginRight: 15 },
   gymInfo: { flex: 1 },
-  gymName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
+  gymName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, color: colors.text },
   gymLocation: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  gymAddress: { fontSize: 12, marginLeft: 4, flex: 1 },
+  gymAddress: { fontSize: 12, marginLeft: 4, flex: 1, color: colors.textSecondary },
   gymRating: { flexDirection: 'row', alignItems: 'center' },
-  ratingText: { fontSize: 12, marginLeft: 4 },
+  ratingText: { fontSize: 12, marginLeft: 4, color: colors.text },
   checkInStatus: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  checkInStatusText: { fontSize: 12, marginLeft: 4 },
+  checkInStatusText: { fontSize: 12, marginLeft: 4, color: colors.success },
   gymActions: { alignItems: 'center' },
   gymActionButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   trainerCard: { flexDirection: 'row', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: colors.border, marginBottom: 15, alignItems: 'center' },
   trainerAvatar: { width: 60, height: 60, borderRadius: 30, marginRight: 15 },
   trainerInfo: { flex: 1 },
-  trainerName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  trainerExperience: { fontSize: 14, marginBottom: 4 },
-  trainerBio: { fontSize: 12 },
+  trainerName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, color: colors.text },
+  trainerExperience: { fontSize: 14, marginBottom: 4, color: colors.textSecondary },
+  trainerBio: { fontSize: 12, color: colors.textSecondary },
   trainerActions: { alignItems: 'center' },
   trainerActionButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   checkInHistoryCard: { flexDirection: 'row', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: colors.border, marginBottom: 10, alignItems: 'center', justifyContent: 'space-between' },
   checkInHistoryInfo: { flex: 1 },
-  checkInHistoryGymName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-  checkInHistoryTime: { fontSize: 12, marginTop: 2 },
+  checkInHistoryGymName: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, color: colors.text },
+  checkInHistoryTime: { fontSize: 12, marginTop: 2, color: colors.textSecondary },
   activeCheckInContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  notificationsContainer: { gap: 10 },
+  notificationCard: { flexDirection: 'row', borderRadius: 12, padding: 15, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  unreadNotification: { backgroundColor: 'rgba(255, 193, 7, 0.1)' },
+  notificationContent: { flex: 1 },
+  notificationTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 4, color: colors.text },
+  notificationMessage: { fontSize: 14, marginBottom: 6, color: colors.textSecondary },
+  notificationTime: { fontSize: 12, color: colors.textSecondary },
+  markAsReadButton: { padding: 8, marginLeft: 10 },
+  deleteButton: { padding: 8, marginLeft: 5 },
+  
+  // Multi-Gym Styles
+  multiGymHeader: { marginBottom: 20 },
+  headerContent: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 16, padding: 20 },
+  headerText: { marginLeft: 15, flex: 1 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 5 },
+  headerSubtitle: { fontSize: 14, color: colors.textSecondary },
+  
+  // Active Subscription
+  activeSubscriptionContainer: { marginBottom: 20 },
+  activeSubscriptionCard: { backgroundColor: colors.surface, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border },
+  subscriptionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  tierBadge: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255, 193, 7, 0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 15 },
+  tierBadgeText: { fontSize: 24 },
+  subscriptionInfo: { flex: 1 },
+  subscriptionTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 5 },
+  subscriptionStatus: { fontSize: 14, color: colors.success, fontWeight: '500' },
+  manageButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  subscriptionDetails: { gap: 10 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  detailLabel: { fontSize: 14, color: colors.textSecondary },
+  detailValue: { fontSize: 14, fontWeight: '500', color: colors.text },
+  
+  // Accessible Gyms
+  accessibleGymsSection: { marginTop: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginBottom: 15 },
+  
+  // Plans Container
+  plansContainer: { flex: 1 },
+  plansHeader: { alignItems: 'center', marginBottom: 20 },
+  plansTitle: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 5 },
+  plansSubtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+  tiersScrollView: { marginBottom: 20 },
+  
+  // Tier Cards
+  tierCard: { width: width - 40, marginHorizontal: 20, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border, position: 'relative' },
+  popularTierCard: { borderColor: colors.primary, borderWidth: 2 },
+  popularBadge: { position: 'absolute', top: -10, left: '50%', transform: [{ translateX: -50 }], backgroundColor: colors.primary, paddingHorizontal: 15, paddingVertical: 5, borderRadius: 12 },
+  popularBadgeText: { fontSize: 10, fontWeight: 'bold', color: colors.primaryText },
+  tierHeader: { alignItems: 'center', marginBottom: 20 },
+  tierIcon: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  tierIconText: { fontSize: 30 },
+  tierName: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 5 },
+  tierDescription: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+  tierPricing: { alignItems: 'center', marginBottom: 20 },
+  tierPrice: { fontSize: 32, fontWeight: 'bold', color: colors.text },
+  tierPricePeriod: { fontSize: 14, color: colors.textSecondary },
+  tierFeatures: { marginBottom: 20, gap: 10 },
+  featureItem: { flexDirection: 'row', alignItems: 'center' },
+  featureText: { fontSize: 14, color: colors.text, marginLeft: 10, flex: 1 },
+  subscribeButton: { paddingVertical: 15, borderRadius: 12, alignItems: 'center' },
+  disabledButton: { opacity: 0.6 },
+  subscribeButtonText: { fontSize: 16, fontWeight: 'bold', color: colors.primaryText },
+  
+  // Benefits Section
+  benefitsSection: { marginTop: 20 },
+  benefitsTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginBottom: 15, textAlign: 'center' },
+  benefitsList: { gap: 15 },
+  benefitItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 12, padding: 15 },
+  benefitContent: { marginLeft: 15, flex: 1 },
+  benefitTitle: { fontSize: 16, fontWeight: 'bold', color: colors.text, marginBottom: 5 },
+  benefitDescription: { fontSize: 14, color: colors.textSecondary },
 });
 
 export default Profile;

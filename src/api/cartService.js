@@ -46,3 +46,15 @@ export const removeFromCart = async (cartItemId) => {
     throw error;
   }
 };
+
+export const createCheckout = async () => {
+  try {
+    console.log('[API] Creating checkout...');
+    const response = await apiClient.post('/cart/checkout');
+    console.log('[API] Checkout created:', response.data);
+    return response.data.data.checkoutUrl;
+  } catch (error) {
+    console.error("[API] Error creating checkout:", error.response?.data || error.message);
+    throw error;
+  }
+};

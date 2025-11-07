@@ -10,6 +10,7 @@ import DietLog from "../screens/Member/DietLog";
 import LoginScreen from "../screens/LoginScreen";
 import WorkoutLog from "../screens/Member/WorkoutLog";
 import BottomTabNavigator from "./BottomTabNavigator";
+import TestOllamaScreen from "../screens/TestOllamaScreen";
 
 
 const Stack = createNativeStackNavigator();
@@ -48,6 +49,7 @@ const AppNavigator = () => {
           // ✅ User not logged in → login screen
           <Stack.Screen name="LoginScreen" component={LoginScreen} />
         )}
+        <Stack.Screen name="ollama" component={TestOllamaScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

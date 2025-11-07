@@ -1,4 +1,3 @@
-// src/pages/Store.jsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -21,7 +20,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 
 import Events from './Events';
 import { fetchProducts } from '../../api/shopService';
-import { fetchCart, addToCart, removeFromCart, updateCartItem } from '../../api/cartService';
+import { 
+  fetchCart, 
+  addToCart, 
+  removeFromCart, 
+  updateCartItem,
+  createCheckout 
+} from '../../api/cartService';
 import apiClient from '../../api/apiClient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -54,6 +59,7 @@ const Store = () => {
   const [error, setError] = useState(null);
   const [cartItems, setCartItems] = useState([]);
   const [isCartVisible, setIsCartVisible] = useState(false);
+  const [checkoutProcessing, setCheckoutProcessing] = useState(false);
 
   // --- useEffect FOR FETCHING INITIAL DATA ---
   useEffect(() => {
@@ -191,6 +197,63 @@ const Store = () => {
     return total.toLocaleString();
   };
 
+  // The Checkout Handler
+  const handleCheckout = async () => {
+    try {
+      console.log('[STORE] Initiating checkout...');
+      setCheckoutProcessing(true);
+      
+      // Show processing alert
+      Alert.alert('Processing', 'Creating your secure checkout page...', [
+        { text: 'OK', style: 'default' }
+      ]);
+
+      // Call your backend endpoint
+      const checkoutUrl = await createCheckout();
+
+      if (checkoutUrl) {
+        console.log('[STORE] Opening checkout URL:', checkoutUrl);
+        
+        // Close the cart modal before opening the browser
+        setIsCartVisible(false);
+        
+        // Use React Native's Linking API to open the URL in the device's browser
+        const supported = await Linking.canOpenURL(checkoutUrl);
+        if (supported) {
+          await Linking.openURL(checkoutUrl);
+          
+          // Show success message
+          Alert.alert(
+            'Checkout Opened', 
+            'You have been redirected to our secure payment page. Complete your purchase there and you will be redirected back to the app.',
+            [{ text: 'OK', style: 'default' }]
+          );
+        } else {
+          Alert.alert('Error', `Unable to open this URL: ${checkoutUrl}`);
+        }
+      } else {
+        throw new Error('Checkout URL not received from server.');
+      }
+    } catch (error) {
+      console.error('[STORE] Checkout failed:', error);
+      
+      // Handle specific error messages
+      let errorMessage = 'Could not initiate checkout. Please try again later.';
+      
+      if (error.message && error.message.includes('One-time checkout is not enabled')) {
+        errorMessage = 'One-time checkout is not enabled. Please contact support or try again later.';
+      }
+      
+      Alert.alert(
+        'Checkout Failed', 
+        errorMessage,
+        [{ text: 'OK', style: 'default' }]
+      );
+    } finally {
+      setCheckoutProcessing(false);
+    }
+  };
+
   // --- EXISTING FUNCTIONS (UNCHANGED) ---
   const toggleLike = (productId) => {
     setLikedItems(prev => {
@@ -201,37 +264,6 @@ const Store = () => {
     });
   };
 
-// src/pages/Store.jsx
-
-// ✅ 2. NEW: The Checkout Handler
-const handleCheckout = async () => {
-  try {
-    console.log('[STORE] Initiating checkout...');
-    Alert.alert('Processing', 'Creating your secure checkout page...');
-
-    // Call your new backend endpoint
-    const response = await apiClient.post('/cart/checkout');
-    const { checkoutUrl } = response.data.data;
-
-    if (checkoutUrl) {
-      console.log('[STORE] Opening checkout URL:', checkoutUrl);
-      // Use React Native's Linking API to open the URL in the device's browser
-      const supported = await Linking.canOpenURL(checkoutUrl);
-      if (supported) {
-        await Linking.openURL(checkoutUrl);
-        // Close the cart modal after opening the checkout
-        setIsCartVisible(false);
-      } else {
-        Alert.alert('Error', `Unable to open this URL: ${checkoutUrl}`);
-      }
-    } else {
-      throw new Error('Checkout URL not received from server.');
-    }
-  } catch (error) {
-    console.error('[STORE] Checkout failed:', error);
-    Alert.alert('Checkout Failed', 'Could not initiate checkout. Please try again.');
-  }
-};
   // --- RENDER FUNCTIONS ---
   const renderProductCard = ({ item: product }) => (
     <TouchableOpacity style={[styles.productCard, { width: CARD_WIDTH }]}>
@@ -385,7 +417,7 @@ const handleCheckout = async () => {
     </ScrollView>
   );
 
-  // ✅ 3. UPDATED: The Cart Modal with the Checkout Button
+  // The Cart Modal with the Checkout Button
   const renderCartModal = () => (
     <Modal
       visible={isCartVisible}
@@ -444,9 +476,15 @@ const handleCheckout = async () => {
 
               <View style={styles.cartFooter}>
                   <Text style={styles.cartTotalText}>Total: ₹{getCartTotal()}</Text>
-                  <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-                      <View style={styles.buttonSolidBlue}>
-                         <Text style={styles.applyButtonText}>Checkout</Text>
+                  <TouchableOpacity 
+                    style={[styles.checkoutButton, checkoutProcessing && styles.disabledButton]} 
+                    onPress={handleCheckout}
+                    disabled={checkoutProcessing}
+                  >
+                      <View style={[styles.buttonSolidBlue, checkoutProcessing && styles.disabledButton]}>
+                         <Text style={styles.applyButtonText}>
+                           {checkoutProcessing ? 'Processing...' : 'Checkout'}
+                         </Text>
                       </View>
                   </TouchableOpacity>
               </View>
@@ -918,6 +956,10 @@ const styles = StyleSheet.create({
   checkoutButton: {
       borderRadius: 16,
       overflow: 'hidden',
+  },
+  disabledButton: {
+    backgroundColor: '#666',
+    opacity: 0.7,
   },
   filterModal: {
     backgroundColor: '#002b5c',
