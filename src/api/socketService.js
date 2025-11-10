@@ -35,7 +35,7 @@ class SocketService {
       
       // Create a new promise for the connection
       this.connectionPromise = new Promise((resolve, reject) => {
-        this.socket = io('https://ad123696d85e.ngrok-free.app', {
+        this.socket = io('https://87a23d31abee.ngrok-free.app', {
           auth: {
             token
           },
