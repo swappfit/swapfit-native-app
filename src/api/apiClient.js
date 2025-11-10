@@ -10,7 +10,7 @@ const auth0 = new Auth0({
 });
 
 const apiClient = axios.create({
-  baseURL: "https://87a23d31abee.ngrok-free.app/api",
+  baseURL: "https://db45ba201c98.ngrok-free.app/api",
   timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });

@@ -13,7 +13,6 @@ import {
 import Video from 'react-native-video';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import GoogleFit, { Scopes } from 'react-native-google-fit';
 
 const { height } = Dimensions.get('window');
 
